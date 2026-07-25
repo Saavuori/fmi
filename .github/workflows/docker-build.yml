@@ -12,6 +12,10 @@ on:
       - '.claude/**'
       - 'deploy/**'
       - '.gitignore'
+  # Manual trigger, for the cases the push filter cannot cover: the very first
+  # push that creates the branch does not evaluate paths-ignore the way a normal
+  # push does, and a release occasionally needs re-cutting after a docs-only fix.
+  workflow_dispatch:
 
 permissions:
   contents: write
