@@ -90,8 +90,12 @@ func assemble(mp *fmiwfs.MultiPoint, locations []fmiwfs.Location) []StationDetai
 
 		values := make(map[string]float64, len(mp.Fields))
 		for _, p := range Parameters {
-			if v, ok := mp.Field(s, p.Code); ok && !math.IsNaN(v) {
-				values[p.Code] = v
+			v, ok := mp.Field(s, p.Code)
+			if !ok || math.IsNaN(v) {
+				continue
+			}
+			if adjusted, keep := normalize(p.Code, v); keep {
+				values[p.Code] = adjusted
 			}
 		}
 		if len(values) == 0 {
@@ -133,4 +137,24 @@ func assemble(mp *fmiwfs.MultiPoint, locations []fmiwfs.Location) []StationDetai
 
 func posKey(lat, lon float64) [2]int64 {
 	return [2]int64{int64(math.Round(lat * 1e5)), int64(math.Round(lon * 1e5))}
+}
+
+// normalize converts FMI's in-band sentinel values into something meaningful,
+// reporting false for readings that should be dropped entirely.
+//
+// Snow depth is the one that bites: FMI encodes "no snow" as -1 and "could not be
+// determined" as -3 rather than omitting them. Passing those through unexamined
+// puts a -1 cm snow depth on the map, and colouring it against a scale that
+// starts at 0 makes bare ground look like the deepest snow on the map.
+func normalize(code string, v float64) (float64, bool) {
+	if code != "snow_aws" {
+		return v, true
+	}
+	switch {
+	case v == -1:
+		return 0, true // measured, and there is no snow
+	case v < 0:
+		return 0, false // -3 and friends: the station could not determine it
+	}
+	return v, true
 }

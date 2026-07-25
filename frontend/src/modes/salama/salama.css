@@ -1,0 +1,53 @@
+/* Salama (lightning) mode.
+ *
+ * The shared index.css owns the glass chrome; everything here is scoped under
+ * .mode-salama or uses a salama-unique class name, so nothing leaks. The status
+ * banner classes are shared with tutka.css, which loads alongside this. */
+
+.mode-salama {
+  --accent: #fbbf24;
+  --accent-alt: #f472b6;
+}
+
+:root[data-theme='light'] .mode-salama {
+  --accent: #b45309;
+  --accent-alt: #a21caf;
+}
+
+.mode-salama .panel-title {
+  color: var(--accent);
+}
+
+.mode-salama .conn-dot {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.mode-salama .layer-toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* The two type swatches mirror how the map draws each kind: a ground strike is a
+   filled dot, an intra-cloud flash is a ring. */
+.salama-swatch--ground {
+  background: var(--accent);
+}
+
+.salama-swatch--cloud {
+  background: transparent;
+  border: 1.5px solid var(--accent);
+}
+
+.strike-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.strike-popup strong {
+  font-size: 12px;
+  color: var(--accent);
+}

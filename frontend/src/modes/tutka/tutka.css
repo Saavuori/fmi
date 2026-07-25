@@ -1,0 +1,334 @@
+/* Tutka (radar) mode.
+ *
+ * The shared index.css owns the glass chrome — panels, headers, layer toggles,
+ * the transport bar, scrollbars, the mobile sheet geometry. Everything here is
+ * either scoped under .mode-tutka or uses a radar-unique class name, so nothing
+ * leaks into the other modes. */
+
+.mode-tutka {
+  /* The generic accent every piece of shared chrome tints itself with. Radar
+     reads as blue-violet rather than the marine teal of the sibling app. */
+  --accent: #60a5fa;
+  --accent-alt: #a78bfa;
+}
+
+:root[data-theme='light'] .mode-tutka {
+  --accent: #2563eb;
+  --accent-alt: #7c3aed;
+}
+
+/* Re-tint the shared chrome that hardcodes teal. */
+.mode-tutka .panel-title {
+  color: var(--accent);
+}
+
+.mode-tutka .conn-dot {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.mode-tutka .layer-toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- Product and window toggles ---------- */
+
+/* Products carry a unit alongside the label, so they get a full-width row each
+   rather than the shared two-up grid. */
+.mode-tutka .radar-products {
+  grid-template-columns: 1fr;
+}
+
+.mode-tutka .radar-products .layer-toggle {
+  justify-content: space-between;
+}
+
+.mode-tutka .radar-unit {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: none;
+}
+
+.mode-tutka .radar-windows {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.mode-tutka .radar-windows .layer-toggle {
+  justify-content: center;
+  padding-inline: 4px;
+}
+
+/* ---------- Legend ---------- */
+
+.radar-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.radar-legend__bar {
+  display: flex;
+  height: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.radar-legend__swatch {
+  flex: 1 1 0;
+}
+
+.radar-legend__labels {
+  display: flex;
+  justify-content: space-between;
+}
+
+.radar-legend__label {
+  flex: 1 1 0;
+  text-align: center;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* ---------- Opacity slider ---------- */
+
+.radar-slider {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.radar-slider input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.radar-slider__value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-body);
+  min-width: 34px;
+  text-align: right;
+}
+
+/* ---------- Transport bar additions ---------- */
+
+/* The shared .replay-bar stacks its children in a column, which suits the
+   sibling app's two-row transport. The radar loop's controls — play, two step
+   buttons, clock, scrubber, a live pill and a speed group — belong on one line,
+   so the direction and width are overridden here. The glass, positioning and
+   mobile rebasing all still come from index.css. */
+.replay-bar--radar {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  width: min(94vw, 720px);
+}
+
+/* The shared transport hardcodes the marine teal, so re-tint it to the mode
+   accent the rest of the chrome uses. */
+.mode-tutka .replay-play {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.mode-tutka .replay-play:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.mode-tutka .replay-scrubber::-webkit-slider-thumb {
+  background: var(--accent);
+}
+
+.mode-tutka .replay-scrubber::-moz-range-thumb {
+  background: var(--accent);
+}
+
+.mode-tutka .radar-step {
+  flex: 0 0 auto;
+}
+
+.radar-clock {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  flex: 0 0 auto;
+}
+
+.radar-clock__date {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.radar-scrub {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-width: 80px;
+}
+
+.radar-scrub .replay-scrubber {
+  width: 100%;
+}
+
+.radar-scrub__loading {
+  position: absolute;
+  top: -13px;
+  left: 0;
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* The live pill lights up only while the newest frame is on screen, so a viewer
+   who has scrubbed back can see at a glance that they are looking at the past. */
+.radar-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-button);
+  background: var(--bg-button);
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.radar-live:hover {
+  border-color: var(--border-button-hover);
+  color: var(--text-body);
+}
+
+.radar-live--on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.radar-speeds {
+  display: inline-flex;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.radar-speed {
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.radar-speed:hover {
+  color: var(--text-body);
+}
+
+.radar-speed--on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- Point readout sparkline ---------- */
+
+.radar-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 46px;
+  padding: 4px 0 0;
+  margin-bottom: 10px;
+}
+
+.radar-spark__bar {
+  flex: 1 1 0;
+  min-height: 2px;
+  border-radius: 1px 1px 0 0;
+  background: var(--accent);
+}
+
+/* A gap is drawn as an empty slot rather than a zero-height bar sitting on the
+   axis, so "no reading" cannot be misread as "no rain". */
+.radar-spark__bar--gap {
+  align-self: stretch;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--border-faint) 0 2px,
+    transparent 2px 5px
+  );
+}
+
+/* ---------- Status banner ---------- */
+
+.radar-status {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--bg-panel-hover);
+  border: 1px solid var(--border-glow);
+  backdrop-filter: blur(12px);
+  color: var(--text-body);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.radar-status--error {
+  border-color: var(--accent-coral);
+  color: var(--accent-coral);
+}
+
+@media (max-width: 768px) {
+  /* The bar has more controls than the sibling app's, so on a phone the date line
+     and the speed group give way to keep the clock and scrubber usable. */
+  .radar-clock__date,
+  .radar-speeds {
+    display: none;
+  }
+
+  .replay-bar--radar {
+    gap: 6px;
+  }
+
+  .radar-status {
+    max-width: calc(100vw - 32px);
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* ---------- Nowcast note ---------- */
+
+.radar-nowcast-note {
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  margin: 2px 0 12px;
+}
+
+/* A weak motion estimate is called out rather than buried, because the panel is
+   withholding the arrival time in that case and the viewer should know why. */
+.radar-nowcast-note--weak {
+  color: var(--accent-gold);
+}

@@ -230,6 +230,17 @@ type pointSample struct {
 	State SampleState `json:"state"`
 }
 
+type nowcastResponse struct {
+	Motion Motion          `json:"motion"`
+	Steps  []Extrapolation `json:"steps"`
+	// ArrivalMinutes is how long until rain reaches the point, or -1 when none
+	// arrives inside the horizon.
+	ArrivalMinutes int `json:"arrival_minutes"`
+	// Method names what this actually is, so a client cannot present it as a
+	// forecast by accident.
+	Method string `json:"method"`
+}
+
 type pointResponse struct {
 	Lat     float64       `json:"lat"`
 	Lon     float64       `json:"lon"`
@@ -237,7 +248,15 @@ type pointResponse struct {
 	Unit    string        `json:"unit"`
 	Current pointSample   `json:"current"`
 	Series  []pointSample `json:"series"`
+	// Nowcast is present only when two recent frames yielded a usable motion
+	// estimate — on a dry or stationary map there is nothing to extrapolate, and
+	// inventing a vector would be worse than admitting that.
+	Nowcast *nowcastResponse `json:"nowcast,omitempty"`
 }
+
+// arrivalThresholdDBZ is the reflectivity that counts as "rain reaching you". 15
+// dBZ is light but unambiguous rain rather than drizzle at the detection floor.
+const arrivalThresholdDBZ = 15
 
 // Point reads the raw values under a location: what the radar sees there now and
 // over the last hour.
@@ -272,11 +291,18 @@ func (h *Handlers) Point(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := pointResponse{Lat: lat, Lon: lon, Product: p.ID, Unit: p.Unit}
+
+	// Keep the last two frames aside for the motion estimate rather than
+	// re-reading them: they are the most expensive thing on this path.
+	var previous, latest *Frame
+	var latestTime time.Time
 	for _, t := range times {
 		frame, err := h.store.Get(p.ID, t)
 		if err != nil {
 			continue
 		}
+		previous, latest, latestTime = latest, frame, t
+
 		v, state := frame.ValueAt(lon, lat)
 		sample := pointSample{Time: t.Format(time.RFC3339), State: state}
 		if state == StateMeasured {
@@ -291,8 +317,49 @@ func (h *Handlers) Point(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res.Current = res.Series[len(res.Series)-1]
+	res.Nowcast = h.nowcast(p, previous, latest, latestTime, times, lon, lat)
 
 	writeJSON(w, res)
+}
+
+// nowcast extrapolates the point forward from the two most recent frames, or
+// returns nil when that cannot be done honestly.
+//
+// It is offered for reflectivity only. The accumulation products are already
+// integrals over past time, so advecting them would produce a number that means
+// nothing; and rain rate is noisier than reflectivity for pattern matching while
+// answering the same question.
+func (h *Handlers) nowcast(
+	p Product,
+	previous, latest *Frame,
+	latestTime time.Time,
+	times []time.Time,
+	lon, lat float64,
+) *nowcastResponse {
+	if p.ID != "dbz" || previous == nil || latest == nil || len(times) < 2 {
+		return nil
+	}
+
+	dt := latestTime.Sub(times[len(times)-2]).Seconds()
+	// A gap far from the nominal cadence means a missing frame sat between these
+	// two, and treating it as one step would halve or third the speed.
+	nominal := float64(p.StepMinutes) * 60
+	if dt <= 0 || dt > nominal*1.5 {
+		return nil
+	}
+
+	motion := EstimateMotion(previous, latest, dt)
+	if !motion.Valid {
+		return nil
+	}
+
+	steps := ExtrapolatePoint(latest, motion, lon, lat)
+	return &nowcastResponse{
+		Motion:         motion,
+		Steps:          steps,
+		ArrivalMinutes: ArrivalMinutes(steps, arrivalThresholdDBZ),
+		Method:         "advection of the latest radar frame along a single measured motion vector",
+	}
 }
 
 // product resolves a product id, defaulting to the first (reflectivity) when the
