@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pause, Play, Radio, SkipBack, SkipForward } from 'lucide-react';
+import { usePublishedHeight } from '../../../shared/hooks/usePublishedHeight';
 import { clockDateTime, clockTime } from '../lib/api';
 import type { RadarLoop } from '../hooks/useRadarLoop';
 
@@ -24,10 +25,20 @@ const COVERAGE_NOTE_THRESHOLD = 0.8;
  * The clock is the most important element here. A radar animation with no
  * timestamp invites the viewer to read an hour-old frame as current weather, so
  * the time is always visible and the newest frame is labelled as live.
+ *
+ * On a phone the bar is docked full-bleed above the tab bar and the scrubber
+ * wraps onto a row of its own (tutka.css), so dragging through time gets the
+ * whole width of the screen instead of the gap left between the clock and the
+ * speed buttons. Its measured height is published to `--timeline-height` for the
+ * map controls that have to sit above it.
  */
 export const ReplayBar: React.FC<ReplayBarProps> = ({ loop, windowHours }) => {
   const { frames, index, current, playing, speed, loadedCount, live } = loop;
+  const barRef = usePublishedHeight('--timeline-height');
 
+  // Below the hook, not above it: an empty archive still has to run every hook
+  // this component declares, and the callback ref publishes 0 when the bar is
+  // absent anyway.
   if (frames.length === 0) return null;
 
   const last = frames.length - 1;
@@ -38,7 +49,7 @@ export const ReplayBar: React.FC<ReplayBarProps> = ({ loop, windowHours }) => {
   const stillFilling = frames.length > 1 && spanHours < windowHours * COVERAGE_NOTE_THRESHOLD;
 
   return (
-    <div className="replay-bar replay-bar--radar">
+    <div className="replay-bar replay-bar--radar" ref={barRef}>
       <button
         className="replay-play"
         onClick={loop.togglePlaying}

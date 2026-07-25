@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Point } from 'geojson';
-import { ChevronLeft, Moon, Sun, Zap } from 'lucide-react';
+import { ChevronLeft, Moon, Sun, X, Zap } from 'lucide-react';
 import { stopPanelClick } from '../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../shared/components/BottomSheet';
+import { Panel } from '../../shared/components/Panel';
 import { LocateControl } from '../../shared/components/LocateControl';
 import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
 import {
@@ -269,7 +269,7 @@ function SalamaApp({ theme, onToggleTheme }: SalamaAppProps) {
         <LocateControl getMap={() => map.current} />
       </div>
 
-      <BottomSheet
+      <Panel
         variant="filter"
         isMobile={isMobile}
         open
@@ -282,6 +282,8 @@ function SalamaApp({ theme, onToggleTheme }: SalamaAppProps) {
             <Zap size={16} />
             <span>Salama</span>
           </div>
+          {/* Folds the desktop rail away; on a phone it dismisses the overlay,
+              which is the only way back to the map — hence the X. */}
           {!bodyCollapsed && (
             <button
               className="icon-btn"
@@ -289,9 +291,9 @@ function SalamaApp({ theme, onToggleTheme }: SalamaAppProps) {
                 e.stopPropagation();
                 setIsCollapsed(v => !v);
               }}
-              aria-label="Pienennä salamavalikko"
+              aria-label={isMobile ? 'Sulje salamavalikko' : 'Pienennä salamavalikko'}
             >
-              <ChevronLeft size={16} />
+              {isMobile ? <X size={18} /> : <ChevronLeft size={16} />}
             </button>
           )}
         </div>
@@ -376,7 +378,7 @@ function SalamaApp({ theme, onToggleTheme }: SalamaAppProps) {
             </div>
           </div>
         )}
-      </BottomSheet>
+      </Panel>
 
       {coldStart && <div className="radar-status">Ladataan salamahavaintoja…</div>}
       {error && <div className="radar-status radar-status--error">{error}</div>}

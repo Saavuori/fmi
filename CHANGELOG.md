@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. Tutka is a live weather map of Finland built on the Finnish Meteorological Institute's open data, and is a sibling of the Fintraffic live traffic map — same Go + React/MapLibre single-container architecture, same CI-owned versioning.
 
+## [v0.2.0] - 2026-07-25
+
+### Changed
+- **The timeline gets the whole width of the phone screen**: the transport bar is now docked edge to edge above the tab bar, with the buttons on one row and the scrubber alone on the row beneath it, and a thumb sized for a finger rather than a mouse. It used to be a centred pill sharing one line with the clock, the live button and the speed group, which left the scrubber about a third of the screen — an hour of five-minute frames in roughly two pixels each, on the one control a phone visitor actually drags. Nothing was hidden to buy the room: the wrap gives it back, and the speed buttons that used to be dropped on small screens are back with it.
+- **The mobile panels are full-screen overlays instead of a bottom sheet**: the product picker, the legend and the point readout open over the map and close from their own header, rather than living in a sheet that was permanently parked along the bottom edge and dragged between peek, half and full. The filter panel is opened from a launcher button in the top-right corner; a map selection still opens the readout directly. The desktop rails are unchanged.
+
+### Removed
+- **The draggable bottom sheet, and the layout plumbing it needed**: snap-point physics, fling detection, the per-sheet height each one published to CSS and the rule that no two sheets could share the bottom edge — which is why picking a point on the radar had to fold the filter away first. What is left is one measured value, the docked timeline's height, which the locate button and the map attribution rest on.
+
 ## [v0.1.1] - 2026-07-25
 
 ### Fixed

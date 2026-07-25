@@ -40,10 +40,10 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.15);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
   --app-bg: #020b17;
-  /* Opaque sibling of --bg-panel-hover, for the mobile tab bar. The bar is the
-     one surface that must not be see-through: a minimized sheet's box extends
-     down behind it, so any transparency shows the sheet's edge bleeding into
-     the nav. */
+  /* Opaque sibling of --bg-panel-hover, for the mobile tab bar and the
+     full-screen panel overlays. Both are surfaces that must not be see-through:
+     a moving radar map read through glass is unreadable, and the blur would cost
+     a repaint per frame of the loop. */
   --bg-bar: hsl(210, 78%, 9%);
 }
 
@@ -364,7 +364,7 @@ a,
 
 /* Floating search pill over the map (mobile only — only mounted there). The
    bottom tab bar cleared the top of the screen, so search lives up here instead
-   of being buried under the sheet's peek. Reuses the .vessel-search internals
+   of being buried at the bottom. Reuses the .vessel-search internals
    but wears the full glass-panel treatment rather than the inset field look. */
 .vessel-search-overlay {
   position: absolute;
@@ -1211,13 +1211,8 @@ a,
   flex-shrink: 0;
 }
 
-@media (max-width: 768px) {
-  .replay-bar {
-    bottom: calc(12px + env(safe-area-inset-bottom));
-    width: 94vw;
-    padding: 8px 10px;
-  }
-}
+/* The phone layout docks this bar full-bleed above the tab bar — see the mobile
+   section further down, which owns every override it needs. */
 
 /* ---------- Version badge ---------- */
 
@@ -1436,21 +1431,21 @@ a,
 
 /* ---------- Mobile ---------- */
 
-/* On phones the side panels become draggable bottom sheets (see
-   shared/components/BottomSheet). Each open sheet publishes its live height to
-   --sheet-height-<id>; --active-sheet-height is the taller of the two, so the
-   bottom-anchored map controls below always clear whichever sheet is expanded
-   (the fix for the old buried-locate-button problem). useBottomSheet writes the
-   two inputs; the max() here recomposes without any JS coordination. */
+/* On phones the side panels become full-screen overlays opened from a launcher
+   (see shared/components/Panel), so nothing but the tab bar and the timeline
+   owns the bottom edge. That is what lets the timeline run the full width.
+
+   The two bands the bottom-anchored map controls have to clear: */
 :root {
-  --sheet-height-filter: 0px;
-  --sheet-height-detail: 0px;
-  --active-sheet-height: max(var(--sheet-height-filter), var(--sheet-height-detail));
   /* Height reserved by the mobile bottom tab bar (0 on desktop, where the
-     switcher is a floating pill). Bottom sheets rest on top of this band and
-     the floating map controls add it into their bottom offset so nothing hides
-     behind the nav. Includes the home-indicator safe area. */
+     switcher is a floating pill). Everything docked at the bottom sits on top
+     of this band and the floating map controls add it into their bottom offset,
+     so nothing hides behind the nav. Includes the home-indicator safe area. */
   --tabbar-height: 0px;
+  /* Height of the docked transport bar, measured and published by the component
+     that renders it (usePublishedHeight) because it depends on the mode, on
+     whether there are frames at all, and on how its rows wrap. 0 when absent. */
+  --timeline-height: 0px;
 }
 
 @media (max-width: 768px) {
@@ -1461,23 +1456,16 @@ a,
     --tabbar-height: calc(64px + env(safe-area-inset-bottom));
   }
 
-  /* The floating summary pills are redundant on mobile — the detail sheet is
+  /* The floating summary pills are redundant on mobile — the detail overlay is
      the single source of selection detail — so hide them (Meri's follow/trail
-     actions move into the sheet header via VesselActions). */
+     actions move into the panel header via VesselActions). */
   .vessel-card-overlay,
   .train-card-overlay,
   .selected-card-overlay {
     display: none;
   }
 
-  /* Sheet icon buttons (header collapse/close, relocated follow/trail) get the
-     full 44px thumb target. On mobile the panels render as `.bottom-sheet`. */
-  .bottom-sheet .icon-btn {
-    width: 44px;
-    height: 44px;
-  }
-
-  /* Meri's relocated follow / track-history controls, in the detail sheet. */
+  /* Meri's relocated follow / track-history controls, in the detail panel. */
   .vessel-actions-row {
     display: flex;
     align-items: center;
@@ -1507,56 +1495,31 @@ a,
     flex: none;
   }
 
-  /* The bottom tab bar already names the active mode, so the filter sheet's
-     mode title ("Meriliikenne" …) and its desktop collapse chevron are
-     redundant on phones — and they eat the most valuable row, the one visible
-     at peek. Hide the header so the peek leads with real content: the live
-     count, then the nearest list. (Detail sheets keep their header — the
-     selected vessel/train name there is not redundant.) */
-  .bottom-sheet--filter .panel-header {
-    display: none;
-  }
-
-  /* With the title gone, the live count is the sheet's summary line — it's what
-     the peek shows, so BottomSheet.css styles and sizes it alongside the rest of
-     the peek geometry rather than here. */
-
-  /* Bigger tap target, lifted clear of the active sheet AND the tab bar. The
-     sheet rests on the tab bar, so its top edge is (tabbar + sheet) up from the
-     bottom; --tabbar-height already carries the safe-area inset. */
+  /* Bigger tap target, lifted clear of the timeline AND the tab bar. Both bands
+     stack up from the bottom edge; --tabbar-height already carries the
+     safe-area inset. */
   .locate-control {
     width: 44px;
     height: 44px;
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 16px);
+    bottom: calc(var(--timeline-height) + var(--tabbar-height) + 16px);
   }
 
   .locate-error {
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 68px);
+    bottom: calc(var(--timeline-height) + var(--tabbar-height) + 68px);
   }
 
-  /* Keep the required attribution visible just above the active sheet. */
+  /* Keep the required attribution visible above the timeline. */
   .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    margin-bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 8px);
+    margin-bottom: calc(var(--timeline-height) + var(--tabbar-height) + 8px);
   }
 
-  /* The controls above rebase off --active-sheet-height, which the sheet
-     publishes continuously. While a finger is down that's a live value and they
-     must track it frame-for-frame; when the sheet is settling into a snap it
-     steps once, so they ease along the sheet's own curve instead of jumping
-     ahead of it. useBottomSheet toggles .sheet-dragging on <html>. */
+  /* --timeline-height steps when the transport bar appears, disappears or
+     rewraps, so the controls resting on it ease rather than jump. */
   .locate-control,
   .locate-error,
-  .replay-bar,
   .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
     transition: bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1),
       margin-bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  :root.sheet-dragging .locate-control,
-  :root.sheet-dragging .locate-error,
-  :root.sheet-dragging .replay-bar,
-  :root.sheet-dragging .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    transition: none;
   }
 
   /* Build metadata isn't useful on a phone. */
@@ -1564,9 +1527,21 @@ a,
     display: none;
   }
 
-  /* Fleet-replay transport bar clears the active sheet and the tab bar. */
+  /* --- the timeline ---
+     Docked full-bleed on top of the tab bar rather than floating as a centred
+     pill. The scrubber is the control a phone visitor actually drags, so it gets
+     the whole width of the screen (the per-mode row layout is in tutka.css). */
   .replay-bar {
-    bottom: calc(var(--active-sheet-height) + var(--tabbar-height) + 12px);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--tabbar-height);
+    width: auto;
+    transform: none;
+    padding: 8px 10px 10px;
+    border-radius: 14px 14px 0 0;
+    border-bottom: none;
+    box-shadow: 0 -8px 28px -14px rgba(0, 0, 0, 0.6);
   }
 
   /* The mode switcher's transformation into a bottom tab bar lives in its own
@@ -1654,8 +1629,9 @@ a,
 /* ---- Mobile: the switcher becomes the primary bottom navigation ----
    A fixed, thumb-zone tab bar spanning the full width. Placed after the desktop
    rules above so these equal-specificity overrides win on phones. It sits above
-   the sheets (z 12/13) so it's always reachable; the sheets rest on top of it
-   (bottom: var(--tabbar-height)) rather than under it, so nothing overlaps. */
+   the timeline (z 12) and the panel overlays (z 15) so it is always reachable;
+   they end where it begins (bottom/inset: var(--tabbar-height)) rather than
+   running under it, so nothing overlaps. */
 @media (max-width: 768px) {
   .mode-switcher {
     position: fixed;
@@ -1671,8 +1647,8 @@ a,
     border: none;
     border-top: 1px solid var(--border-glow);
     border-radius: 0;
-    /* Opaque, and no backdrop blur: a minimized sheet's box runs down behind the
-       bar, so anything see-through here shows that overhang bleeding through. */
+    /* Opaque, and no backdrop blur: the timeline's rounded top edge rests right
+       on this band, and a see-through nav would show it bleeding through. */
     background: var(--bg-bar);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;

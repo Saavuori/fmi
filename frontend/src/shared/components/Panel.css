@@ -1,0 +1,140 @@
+/* Mobile panel chrome. Everything here is phone-only: above the breakpoint the
+   Panel component renders the desktop `.glass-panel` rail instead, so none of
+   these rules apply.
+
+   The mobile panel is a full-screen overlay, not a bottom sheet. There is no
+   drag, no snap point and no resting height, which means nothing has to be
+   published back to the layout: the bottom edge of the screen belongs to the
+   tab bar and the timeline alone. */
+
+@media (max-width: 768px) {
+  .mobile-panel {
+    position: fixed;
+    /* Stops at the tab bar so the mode switcher stays reachable — the overlay is
+       a view of one mode, not a modal that traps the visitor in it. */
+    inset: 0 0 var(--tabbar-height);
+    z-index: 15;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+    /* Opaque: a full-screen overlay over a moving map is unreadable through
+       glass, and the blur would cost a repaint per frame of the radar loop. */
+    background: var(--bg-bar);
+    border-top: 1px solid var(--border-glow);
+    color: var(--text-primary);
+    animation: mobile-panel-in 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @keyframes mobile-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-panel {
+      animation: none;
+    }
+  }
+
+  /* The panel's own header becomes the overlay's title bar. Unlike the old
+     sheet — where the tab bar named the mode and the header was hidden to buy
+     back the one visible row — the overlay covers the tab bar's label, so the
+     title earns its place again, and its button is the only way out. */
+  .mobile-panel .panel-header,
+  .mobile-panel .detail-header {
+    flex: none;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border-faint);
+  }
+
+  /* The close button belongs at the far edge of a full-width bar, and the title
+     block takes the slack — in a 320px desktop rail the two sat next to each
+     other because neither had anywhere to go. */
+  .mobile-panel .detail-header {
+    justify-content: space-between;
+  }
+
+  .mobile-panel .detail-header > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobile-panel .panel-title,
+  .mobile-panel .detail-title {
+    font-size: 1.05rem;
+  }
+
+  /* A readout title can lead with an icon (the radar point's map pin). */
+  .mobile-panel .detail-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Full thumb target for the header's close button. */
+  .mobile-panel .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* The body fills what's left and owns the scroll. */
+  .mobile-panel > .filter-content,
+  .mobile-panel > .detail-content {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .mobile-panel .filter-scroll-area,
+  .mobile-panel .detail-content {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Room to breathe: an overlay has the whole screen, so the controls that were
+     cramped into a sheet's visible slot get real tap targets. */
+  .mobile-panel .layer-toggle {
+    min-height: 44px;
+  }
+
+  /* The webcam detail is a fixed-width card on desktop; edge-to-edge here. */
+  .mobile-panel.webcam-popup {
+    width: auto;
+  }
+
+  /* --- launcher ---
+     The collapsed state of a filter panel. Top-right, clear of the status
+     banner's centred pill and of everything docked at the bottom. */
+  .panel-launcher {
+    position: fixed;
+    z-index: 14;
+    top: calc(12px + env(safe-area-inset-top));
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+    color: var(--text-body);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+
+  .panel-launcher:active {
+    transform: scale(0.94);
+    background: var(--bg-panel-hover);
+    color: var(--text-primary);
+  }
+}

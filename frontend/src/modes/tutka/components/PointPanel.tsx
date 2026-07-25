@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapPin, X } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { Panel } from '../../../shared/components/Panel';
 import { type Nowcast, type PointResponse, bearingText, clockTime, sampleText } from '../lib/api';
 
 interface PointPanelProps {
@@ -33,7 +33,7 @@ export const PointPanel: React.FC<PointPanelProps> = ({
   const bodyCollapsed = !isMobile && isCollapsed;
 
   return (
-    <BottomSheet
+    <Panel
       variant="detail"
       isMobile={isMobile}
       open
@@ -93,7 +93,7 @@ export const PointPanel: React.FC<PointPanelProps> = ({
           )}
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };
 

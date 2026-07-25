@@ -129,8 +129,8 @@ function TutkaApp({ theme, onToggleTheme }: TutkaAppProps) {
     setPoint(null);
     setPointError(null);
     setIsPointCollapsed(false);
-    // Two sheets cannot share one bottom edge on a phone, so folding the filter
-    // away keeps the readout reachable.
+    // The readout takes the screen on a phone, so the filter goes back to being
+    // its launcher rather than reopening behind it when the readout is closed.
     if (window.matchMedia(MOBILE_QUERY).matches) setIsFilterCollapsed(true);
   }, []);
 
@@ -155,8 +155,8 @@ function TutkaApp({ theme, onToggleTheme }: TutkaAppProps) {
       />
 
       <FilterPanel
-        /* The filter sheet stands down while a readout is up on mobile — see
-           BottomSheet's `open`. Desktop shows both rails. */
+        /* The filter panel stands down while a readout is up on mobile — see
+           Panel's `open`. Desktop shows both rails. */
         open={!isMobile || !probe}
         products={meta?.products ?? []}
         product={product}
