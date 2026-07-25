@@ -51,15 +51,6 @@
   text-transform: none;
 }
 
-.weather-map .radar-windows {
-  grid-template-columns: repeat(5, 1fr);
-}
-
-.weather-map .radar-windows .layer-toggle {
-  justify-content: center;
-  padding-inline: 4px;
-}
-
 /* ---------- Legend ---------- */
 
 .radar-legend {
@@ -120,16 +111,23 @@
 /* ---------- Transport bar additions ---------- */
 
 /* The shared .replay-bar stacks its children in a column, which suits the
-   sibling app's two-row transport. The radar loop's controls — play, two step
-   buttons, clock, scrubber, a live pill and a speed group — belong on one line,
-   so the direction and width are overridden here. The glass, positioning and
-   mobile rebasing all still come from index.css. */
+   sibling app's two-row transport. The radar loop's three controls — play, the
+   scrubber and the look-back — belong on one line, so the direction and width are
+   overridden here. The glass, positioning and mobile rebasing all still come from
+   index.css. */
 .replay-bar--radar {
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: nowrap;
-  width: min(94vw, 720px);
+  width: min(94vw, 760px);
+}
+
+/* Only the window buttons are up, while the archive for a freshly picked window
+   loads. Sized to them rather than holding the full transport's width open. */
+.replay-bar--radar.replay-bar--empty {
+  width: auto;
+  justify-content: center;
 }
 
 /* The shared transport hardcodes the marine teal, so re-tint it to the mode
@@ -150,24 +148,6 @@
 
 .weather-map .replay-scrubber::-moz-range-thumb {
   background: var(--accent);
-}
-
-.weather-map .radar-step {
-  flex: 0 0 auto;
-}
-
-.radar-clock {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  flex: 0 0 auto;
-}
-
-.radar-clock__date {
-  font-size: 9px;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .radar-scrub {
@@ -191,59 +171,78 @@
   white-space: nowrap;
 }
 
-/* The live pill lights up only while the newest frame is on screen, so a viewer
-   who has scrubbed back can see at a glance that they are looking at the past. */
-.radar-live {
+/* ---------- Look-back window ---------- */
+
+/* How far back the scrubber reaches, in the room the step, live and speed buttons
+   used to take — beside the scrubber it governs, and separated from it by a rule
+   so the row does not read as one undifferentiated strip of controls. */
+.radar-windows-bar {
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  gap: 2px;
   flex: 0 0 auto;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border-button);
-  background: var(--bg-button);
+  padding-left: 10px;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.radar-window {
+  padding: 5px 9px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-muted);
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
 
-.radar-live:hover {
-  border-color: var(--border-button-hover);
+.radar-window:hover {
   color: var(--text-body);
 }
 
-.radar-live--on {
+.radar-window--on {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.radar-speeds {
-  display: inline-flex;
-  gap: 2px;
-  flex: 0 0 auto;
+/* ---------- Frame clock ---------- */
+
+/* Centred above the map, clear of the search button on the left and the menu
+   launcher on the right. It is a label, not a control, so it never takes a
+   pointer event away from the map under it. */
+.frame-clock {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: var(--bg-panel-hover);
+  border: 1px solid var(--border-glow);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
 }
 
-.radar-speed {
-  padding: 4px 6px;
-  border-radius: 4px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 10px;
+.frame-clock__time {
+  font-family: 'Courier New', monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-strong);
   font-variant-numeric: tabular-nums;
-  cursor: pointer;
 }
 
-.radar-speed:hover {
-  color: var(--text-body);
-}
-
-.radar-speed--on {
-  border-color: var(--accent);
-  color: var(--accent);
+.frame-clock__date {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ---------- Point readout sparkline ---------- */
@@ -300,46 +299,30 @@
 }
 
 @media (max-width: 768px) {
-  /* Two rows on a phone: every button on the first, the scrubber alone on the
-     second. The bar is docked full-bleed (index.css), so that second row is the
+  /* Two rows on a phone: play and the scrubber on the first, the five windows on
+     the second. The bar is docked full-bleed (index.css), so both rows are the
      width of the screen — scrubbing an hour of frames used to mean dragging
      across the ~120px left between the clock and the speed buttons, which is
-     about two pixels per frame. Nothing is hidden to buy the room: the wrap
-     gives it back, and the speed group returns with it. */
+     about two pixels per frame. */
   .replay-bar--radar {
     /* index.css docks the bar edge to edge; the desktop max-width above would
        otherwise keep it a centred pill. */
     width: auto;
     flex-wrap: wrap;
-    gap: 2px 8px;
+    gap: 2px 10px;
   }
 
-  /* The wide clock exists to fit the date line, which is hidden here — and the
-     width it reserves is what pushes the speed group onto a row of its own. */
-  .replay-bar--radar .replay-clock--wide {
-    min-width: 0;
-    font-size: 0.95rem;
-  }
-
-  /* Ordered last, so it wraps onto its own line and takes all of it. */
   .radar-scrub {
-    order: 10;
-    flex: 1 0 100%;
     flex-direction: column;
     align-items: stretch;
     gap: 0;
   }
 
-  /* On its own row there is nowhere to float above, and no clock to collide
-     with — it reads as a caption under the track instead. */
+  /* Nothing floats above the track on a phone — the clock that used to sit beside
+     it is above the map now — so it reads as a caption under it instead. */
   .radar-scrub__loading {
     position: static;
     text-align: right;
-  }
-
-  /* The clock takes the slack so the live pill and speeds sit at the right end. */
-  .radar-clock {
-    margin-right: auto;
   }
 
   /* A thumb, not a mouse pointer: a 14px handle on a 4px rail is hard to catch
@@ -362,13 +345,34 @@
     border-width: 3px;
   }
 
-  /* Only the date line gives way — the row it was on is now the busy one. */
-  .radar-clock__date {
-    display: none;
+  /* A row of its own below the scrubber, spread across it: five windows beside
+     the play button would leave the track a stub, and they are the coarse control
+     for the fine one directly above them. The rule that separates them on desktop
+     becomes a divider above the row. */
+  .radar-windows-bar {
+    order: 11;
+    flex: 1 0 100%;
+    justify-content: space-between;
+    gap: 0;
+    padding: 4px 0 0;
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .radar-window {
+    flex: 1 1 0;
+    padding: 8px 4px;
+  }
+
+  /* Nothing else is up, so the row has no divider to sit under. */
+  .replay-bar--empty .radar-windows-bar {
+    border-top: none;
+    padding-top: 0;
   }
 
   /* Clear of the filter launcher in the top-right corner. */
-  .radar-status {
+  .radar-status,
+  .frame-clock {
     max-width: calc(100vw - 88px);
     white-space: normal;
     text-align: center;

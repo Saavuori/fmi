@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Tutka is a live weather map of Finland built on the Finnish Meteorological Institute's open data, and is a sibling of the Fintraffic live traffic map — same Go + React/MapLibre single-container architecture, same CI-owned versioning.
 
+## [v0.4.0] - 2026-07-25
+
+### Changed
+- **The animation plays once and stops on the newest frame**: it used to wrap back to the start and run forever, which meant a map left open spent most of its time showing the past while looking like a live view — and the wrap itself, from "now" straight back to an hour ago, is the moment that misreading is easiest. It now runs once from the oldest frame in the window, dwells on the newest and stops there, so an unattended map is showing the current weather. Play from a finished run starts it over from the beginning.
+- **The frame's time is above the map, not down in the transport**: the timestamp is the label that stops an hour-old frame being read as the current weather, and it used to sit at the bottom edge competing with the controls around it. It is now centred at the top of the map, in the reading path of someone watching a front move, with the weekday under it — which matters once the look-back runs to a week.
+- **The look-back is chosen from the timeline**: `Aikaväli` — 1 h through 7 vrk — now sits at the right-hand end of the transport bar, in the room the removed buttons freed, rather than inside the map menu. It says how far back the scrubber beside it reaches, which is a property of the timeline and not of the map, and it was two clicks away behind a panel that had nothing else to do with time. On a phone the buttons take a row of their own beneath the scrubber. The bar stays up with the window buttons alone while a freshly picked window loads, rather than disappearing out from under the control that was just pressed.
+
+### Removed
+- **The step, live and speed buttons**: the transport is play, the scrubber and the look-back. Stepping a frame at a time is what a drag on the scrubber already does; the live pill had nothing left to jump back to now that the loop ends on the newest frame; and playback is fixed at 2 fps, which at five minutes per frame is the pace that reads as movement — the other rates only made the animation harder to follow.
+
 ## [v0.3.0] - 2026-07-25
 
 ### Added

@@ -4,7 +4,6 @@ import { stopPanelClick } from '../shared/hooks/useCollapsiblePanel';
 import { Panel } from '../shared/components/Panel';
 import type { LegendResponse, ProductInfo } from '../radar/api';
 import type { Theme } from '../map/theme';
-import { WINDOWS } from '../radar/windows';
 import { type SalamaState, AGE_BANDS } from '../layers/salama/strikes';
 import { type HavainnotState, SCALES } from '../layers/havainnot/observations';
 
@@ -17,8 +16,6 @@ interface LayersPanelProps {
   onAccessiblePalette: (on: boolean) => void;
   opacity: number;
   onOpacity: (v: number) => void;
-  windowHours: number;
-  onWindowHours: (h: number) => void;
   legend: LegendResponse | null;
   frameCount: number;
 
@@ -61,8 +58,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onAccessiblePalette,
   opacity,
   onOpacity,
-  windowHours,
-  onWindowHours,
   legend,
   frameCount,
   salamaOn,
@@ -139,22 +134,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 >
                   <span>{p.label}</span>
                   <span className="radar-unit">{p.unit}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="filter-section-title" style={{ marginTop: 14 }}>
-              Aikaväli
-            </div>
-            <div className="layer-toggles radar-windows">
-              {WINDOWS.map(w => (
-                <button
-                  key={w.hours}
-                  className={`layer-toggle ${w.hours === windowHours ? 'on' : ''}`}
-                  onClick={() => onWindowHours(w.hours)}
-                  aria-pressed={w.hours === windowHours}
-                >
-                  <span>{w.label}</span>
                 </button>
               ))}
             </div>

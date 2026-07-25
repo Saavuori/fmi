@@ -12,6 +12,7 @@ import { LayersPanel } from './components/LayersPanel';
 import { PointPanel } from './components/PointPanel';
 import { StationPanel } from './components/StationPanel';
 import { ReplayBar } from './components/ReplayBar';
+import { FrameClock } from './components/FrameClock';
 import { PlaceSearch, type Place } from './shared/components/PlaceSearch';
 import { useIsMobile, MOBILE_QUERY } from './shared/hooks/useMediaQuery';
 import { useRadarLoop } from './radar/useRadarLoop';
@@ -294,8 +295,6 @@ function WeatherMap({ theme, onToggleTheme }: WeatherMapProps) {
         onAccessiblePalette={setAccessiblePalette}
         opacity={opacity}
         onOpacity={setOpacityOverride}
-        windowHours={windowHours}
-        onWindowHours={setWindowHours}
         legend={legend}
         frameCount={loop.frames.length}
         salamaOn={enabled.salama}
@@ -337,7 +336,11 @@ function WeatherMap({ theme, onToggleTheme }: WeatherMapProps) {
         />
       )}
 
-      <ReplayBar loop={loop} windowHours={windowHours} />
+      {/* The clock owns the top centre — but the status banner lands there too,
+          and it only appears when there is nothing worth dating anyway. */}
+      {!loop.coldStart && !metaError && !loop.error && <FrameClock current={loop.current} />}
+
+      <ReplayBar loop={loop} windowHours={windowHours} onWindowHours={setWindowHours} />
 
       {/* Cold start is a loading state, not an error: the backend is still filling
           its archive from FMI and will have frames within a minute or two. */}
