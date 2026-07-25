@@ -99,13 +99,14 @@ const Map: React.FC<MapProps> = ({
       style: BASEMAP_STYLES[themeRef.current],
       center: [25.5, 64.5], // roughly the middle of the radar composite
       zoom: 4.4,
-      // Own compact attribution bottom-left rather than the default expanded one.
+      // Own compact attribution rather than the default expanded one; it rides
+      // just above the locate control bottom-right.
       attributionControl: false,
     });
     map.current = m;
     m.addControl(
       new maplibregl.AttributionControl({ compact: true, customAttribution: attribution }),
-      'bottom-left'
+      'bottom-right'
     );
     if (import.meta.env.DEV) (window as unknown as { __map?: maplibregl.Map }).__map = m;
 
