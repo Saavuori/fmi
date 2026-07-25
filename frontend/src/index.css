@@ -1453,31 +1453,44 @@ a,
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3);
 }
 
-/* ---------- MapLibre attribution (compact ⓘ, bottom-left) ---------- */
+/* ---------- MapLibre attribution (compact ⓘ, above the locate control) ------ */
 
-/* We add a compact AttributionControl at bottom-left so the required OSM/CARTO
-   credit stays present but tucks above the version badge, out of the way of the
-   bottom-right locate control. MapLibre renders it as a <details> with the
-   .maplibregl-ctrl-attrib class (collapsed to an ⓘ button in compact mode). */
-.maplibregl-ctrl-bottom-left {
-  z-index: 8;
+/* The required FMI/OSM/CARTO credit is a compact AttributionControl parked
+   bottom-right, stacked directly on top of the locate button so the two read as
+   one column of controls. MapLibre renders it as a <details> with the
+   .maplibregl-ctrl-attrib class (collapsed to an ⓘ button in compact mode);
+   expanded it grows leftwards from the same corner, over the map. */
+.maplibregl-ctrl-bottom-right {
+  z-index: 10;
 }
 
-.maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-  margin: 0 0 40px 8px;
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
+  /* 1.5rem safe-area gap + the 40px locate button + 8px between them. */
+  margin: 0 1rem calc(1.5rem + env(safe-area-inset-bottom) + 48px) 0;
   background: var(--bg-panel);
-  border-radius: 6px;
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
   font-size: 10px;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* Nothing to credit (e.g. before the basemap's TileJSON loads) → hide the
    empty pill rather than show a stray ⓘ. */
-.maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib.maplibregl-attrib-empty {
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib.maplibregl-attrib-empty {
   display: none;
 }
 
-.maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib-inner a {
+/* Collapsed, it should read as a small ⓘ badge tucked under the locate button
+   rather than a full-height map control. */
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-button {
+  width: 20px;
+  height: 20px;
+  background-size: 14px 14px;
+  background-position: center;
+  border-radius: 999px;
+}
+
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib-inner a {
   color: var(--text-secondary);
 }
 
@@ -1612,16 +1625,16 @@ a,
     bottom: calc(var(--timeline-height) + 68px);
   }
 
-  /* Keep the required attribution visible above the timeline. */
-  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    margin-bottom: calc(var(--timeline-height) + 8px);
+  /* Stays glued on top of the (now 44px) locate control as that lifts. */
+  .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
+    margin-bottom: calc(var(--timeline-height) + 68px);
   }
 
   /* --timeline-height steps when the transport bar appears, disappears or
      rewraps, so the controls resting on it ease rather than jump. */
   .locate-control,
   .locate-error,
-  .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
+  .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
     transition: bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1),
       margin-bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1);
   }
