@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Point } from 'geojson';
 import { ChevronLeft, Moon, Sun, Thermometer, X } from 'lucide-react';
 import { stopPanelClick } from '../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../shared/components/BottomSheet';
+import { Panel } from '../../shared/components/Panel';
 import { LocateControl } from '../../shared/components/LocateControl';
 import { useIsMobile, MOBILE_QUERY } from '../../shared/hooks/useMediaQuery';
 import {
@@ -270,7 +270,7 @@ function HavainnotApp({ theme, onToggleTheme }: HavainnotAppProps) {
         <LocateControl getMap={() => map.current} />
       </div>
 
-      <BottomSheet
+      <Panel
         variant="filter"
         isMobile={isMobile}
         open={!isMobile || !selected}
@@ -283,6 +283,8 @@ function HavainnotApp({ theme, onToggleTheme }: HavainnotAppProps) {
             <Thermometer size={16} />
             <span>Havainnot</span>
           </div>
+          {/* Folds the desktop rail away; on a phone it dismisses the overlay,
+              which is the only way back to the map — hence the X. */}
           {!bodyCollapsed && (
             <button
               className="icon-btn"
@@ -290,9 +292,9 @@ function HavainnotApp({ theme, onToggleTheme }: HavainnotAppProps) {
                 e.stopPropagation();
                 setIsFilterCollapsed(v => !v);
               }}
-              aria-label="Pienennä havaintovalikko"
+              aria-label={isMobile ? 'Sulje havaintovalikko' : 'Pienennä havaintovalikko'}
             >
-              <ChevronLeft size={16} />
+              {isMobile ? <X size={18} /> : <ChevronLeft size={16} />}
             </button>
           )}
         </div>
@@ -386,10 +388,10 @@ function HavainnotApp({ theme, onToggleTheme }: HavainnotAppProps) {
             </div>
           </div>
         )}
-      </BottomSheet>
+      </Panel>
 
       {selected && param && (
-        <BottomSheet
+        <Panel
           variant="detail"
           isMobile={isMobile}
           open
@@ -441,7 +443,7 @@ function HavainnotApp({ theme, onToggleTheme }: HavainnotAppProps) {
               </div>
             </div>
           )}
-        </BottomSheet>
+        </Panel>
       )}
 
       {coldStart && <div className="radar-status">Ladataan säähavaintoja…</div>}

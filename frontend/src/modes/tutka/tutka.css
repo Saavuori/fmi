@@ -300,19 +300,76 @@
 }
 
 @media (max-width: 768px) {
-  /* The bar has more controls than the sibling app's, so on a phone the date line
-     and the speed group give way to keep the clock and scrubber usable. */
-  .radar-clock__date,
-  .radar-speeds {
+  /* Two rows on a phone: every button on the first, the scrubber alone on the
+     second. The bar is docked full-bleed (index.css), so that second row is the
+     width of the screen — scrubbing an hour of frames used to mean dragging
+     across the ~120px left between the clock and the speed buttons, which is
+     about two pixels per frame. Nothing is hidden to buy the room: the wrap
+     gives it back, and the speed group returns with it. */
+  .replay-bar--radar {
+    /* index.css docks the bar edge to edge; the desktop max-width above would
+       otherwise keep it a centred pill. */
+    width: auto;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+  }
+
+  /* The wide clock exists to fit the date line, which is hidden here — and the
+     width it reserves is what pushes the speed group onto a row of its own. */
+  .replay-bar--radar .replay-clock--wide {
+    min-width: 0;
+    font-size: 0.95rem;
+  }
+
+  /* Ordered last, so it wraps onto its own line and takes all of it. */
+  .radar-scrub {
+    order: 10;
+    flex: 1 0 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  /* On its own row there is nowhere to float above, and no clock to collide
+     with — it reads as a caption under the track instead. */
+  .radar-scrub__loading {
+    position: static;
+    text-align: right;
+  }
+
+  /* The clock takes the slack so the live pill and speeds sit at the right end. */
+  .radar-clock {
+    margin-right: auto;
+  }
+
+  /* A thumb, not a mouse pointer: a 14px handle on a 4px rail is hard to catch
+     and easy to lose mid-drag. The row's own padding is the vertical target. */
+  .radar-scrub .replay-scrubber {
+    height: 6px;
+    padding: 12px 0;
+    background-clip: content-box;
+  }
+
+  .radar-scrub .replay-scrubber::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+    border-width: 3px;
+  }
+
+  .radar-scrub .replay-scrubber::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border-width: 3px;
+  }
+
+  /* Only the date line gives way — the row it was on is now the busy one. */
+  .radar-clock__date {
     display: none;
   }
 
-  .replay-bar--radar {
-    gap: 6px;
-  }
-
+  /* Clear of the filter launcher in the top-right corner. */
   .radar-status {
-    max-width: calc(100vw - 32px);
+    max-width: calc(100vw - 88px);
     white-space: normal;
     text-align: center;
   }

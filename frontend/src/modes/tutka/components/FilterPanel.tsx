@@ -1,7 +1,7 @@
 import React from 'react';
-import { ChevronLeft, CloudRain, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, CloudRain, Moon, Sun, X } from 'lucide-react';
 import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { BottomSheet } from '../../../shared/components/BottomSheet';
+import { Panel } from '../../../shared/components/Panel';
 import type { LegendResponse, ProductInfo } from '../lib/api';
 import type { Theme } from '../lib/theme';
 import { WINDOWS } from '../lib/windows';
@@ -23,7 +23,7 @@ interface FilterPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isMobile: boolean;
-  /** False while a detail sheet is up on mobile — see BottomSheet's `open`. */
+  /** False while a readout is up on mobile — see Panel's `open`. */
   open?: boolean;
 }
 
@@ -50,7 +50,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const selected = products.find(p => p.id === product);
 
   return (
-    <BottomSheet
+    <Panel
       variant="filter"
       isMobile={isMobile}
       open={open}
@@ -63,6 +63,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <CloudRain size={16} />
           <span>Tutka</span>
         </div>
+        {/* The same button closes the desktop rail into its sliver and dismisses
+            the mobile overlay — on a phone it is the only way back to the map,
+            so it says so with an X rather than a fold-away chevron. */}
         {!bodyCollapsed && (
           <button
             className="icon-btn"
@@ -70,9 +73,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               e.stopPropagation();
               onToggleCollapse();
             }}
-            aria-label="Pienennä tutkavalikko"
+            aria-label={isMobile ? 'Sulje tutkavalikko' : 'Pienennä tutkavalikko'}
           >
-            <ChevronLeft size={16} />
+            {isMobile ? <X size={18} /> : <ChevronLeft size={16} />}
           </button>
         )}
       </div>
@@ -207,6 +210,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
         </div>
       )}
-    </BottomSheet>
+    </Panel>
   );
 };
