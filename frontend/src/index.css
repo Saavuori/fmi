@@ -250,9 +250,12 @@ a,
   opacity: 0.8;
 }
 
-/* ---------- Vessel search ---------- */
+/* ---------- Place search ----------
+   Inherited from the sibling app's vessel search, which searched a list already
+   in the browser. This one asks the backend, so it also has pending and empty
+   states — but the field, the results popover and the rows are the same chrome. */
 
-.vessel-search {
+.place-search {
   position: relative;
   display: flex;
   align-items: center;
@@ -265,12 +268,12 @@ a,
   flex-shrink: 0;
 }
 
-.vessel-search-icon {
+.place-search-icon {
   color: var(--text-muted);
   flex-shrink: 0;
 }
 
-.vessel-search-input {
+.place-search-input {
   flex: 1;
   min-width: 0;
   background: none;
@@ -280,15 +283,15 @@ a,
   font-size: 0.8rem;
 }
 
-.vessel-search-input::placeholder {
+.place-search-input::placeholder {
   color: var(--text-muted);
 }
 
-.vessel-search-input:focus {
+.place-search-input:focus {
   outline: none;
 }
 
-.vessel-search-clear {
+.place-search-clear {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -298,11 +301,11 @@ a,
   flex-shrink: 0;
 }
 
-.vessel-search-clear:hover {
+.place-search-clear:hover {
   color: var(--text-primary);
 }
 
-.vessel-search-results {
+.place-search-results {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -319,7 +322,7 @@ a,
   padding: 4px;
 }
 
-.vessel-search-result {
+.place-search-result {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -334,18 +337,18 @@ a,
   font-family: inherit;
 }
 
-.vessel-search-result:hover {
+.place-search-result:hover {
   background: var(--bg-button-hover);
 }
 
-.vessel-search-dot {
+.place-search-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.vessel-search-name {
+.place-search-name {
   flex: 1;
   min-width: 0;
   font-size: 0.8rem;
@@ -355,29 +358,79 @@ a,
   white-space: nowrap;
 }
 
-.vessel-search-mmsi {
+/* The municipality or region under the name — two places in Finland share a
+   name often enough that the bare name is not always an answer. */
+.place-search-detail {
   font-size: 0.7rem;
   color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Floating search pill over the map (mobile only — only mounted there). The
-   bottom tab bar cleared the top of the screen, so search lives up here instead
-   of being buried at the bottom. Reuses the .vessel-search internals
-   but wears the full glass-panel treatment rather than the inset field look. */
-.vessel-search-overlay {
+/* A row that is a message rather than a result: searching, no matches, failed.
+   In the same popover so the field never leaves the viewer guessing. */
+.place-search-note {
+  padding: 9px 10px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* The data behind the results. OpenStreetMap's licence wants the credit visible
+   where its data is shown, and the basemap's own attribution is bottom-left
+   behind a fold — this is a different dataset answering a different question. */
+.place-search-credit {
+  padding: 6px 10px 4px;
+  border-top: 1px solid var(--border-faint);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+/* --- the floating control over the map ---
+   Top-left, where the mode switcher used to be. Collapsed it is a button the
+   size of the other map controls; opened it becomes the field. It stays out of
+   the left rail's way by sitting above it (the rail starts at 80px). */
+.place-search-overlay {
   position: absolute;
-  z-index: 15;
-  top: calc(env(safe-area-inset-top) + 12px);
-  left: 12px;
-  right: 12px;
+  z-index: 16;
+  top: calc(env(safe-area-inset-top) + 14px);
+  left: 14px;
+  width: 260px;
 }
 
-.vessel-search-overlay .vessel-search {
+.place-search-launcher {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid var(--border-glow);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.place-search-launcher:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+
+.place-search-launcher:active {
+  transform: scale(0.94);
+}
+
+.place-search-overlay .place-search {
   margin-bottom: 0;
-  padding: 11px 12px;
-  border-radius: 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
   background: var(--bg-panel);
   border-color: var(--border-glow);
   backdrop-filter: blur(16px);
@@ -385,8 +438,41 @@ a,
   box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.7);
 }
 
-.vessel-search-overlay .vessel-search-input {
-  font-size: 0.9rem;
+@media (max-width: 768px) {
+  /* Full width bar a thumb can hit, stopping short of the panel launcher in the
+     opposite corner (44px + its 12px inset + a gap). */
+  .place-search-overlay {
+    top: calc(env(safe-area-inset-top) + 12px);
+    left: 12px;
+    width: auto;
+  }
+
+  .place-search-overlay.place-search-overlay--open {
+    right: 12px;
+  }
+
+  .place-search-overlay:not(.place-search-overlay--open) {
+    right: 68px;
+  }
+
+  .place-search-launcher {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .place-search-overlay .place-search {
+    padding: 11px 12px;
+    border-radius: 12px;
+  }
+
+  .place-search-overlay .place-search-input {
+    font-size: 16px; /* iOS zooms the page for anything under 16px on focus. */
+  }
+
+  .place-search-result {
+    min-height: 44px;
+  }
 }
 
 .filter-scroll-area {
@@ -487,6 +573,37 @@ a,
 .layer-toggle:hover {
   background: var(--bg-button-hover);
   border-color: var(--border-button-hover);
+}
+
+/* ---------- Overlay layer blocks ----------
+   One per switchable map layer: the toggle that turns it on, and the controls
+   and legend that only mean anything while it is. An off layer collapses to its
+   toggle alone, so the panel is as long as what is actually being shown. */
+
+.layer-block + .layer-block {
+  margin-top: 6px;
+}
+
+/* Full-width row rather than a cell of the two-up grid — the toggle names a
+   layer and reports its count, which needs the whole line. */
+.layer-toggle--wide {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.layer-toggle__count {
+  margin-left: auto;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.layer-block__body {
+  padding: 8px 0 2px 8px;
+  margin-left: 3px;
+  /* Ties the controls to the toggle above them: they belong to that layer, not
+     to the panel at large. Takes the block's own accent. */
+  border-left: 1px solid var(--border-faint);
 }
 
 .layer-toggle.on {
@@ -1432,30 +1549,19 @@ a,
 /* ---------- Mobile ---------- */
 
 /* On phones the side panels become full-screen overlays opened from a launcher
-   (see shared/components/Panel), so nothing but the tab bar and the timeline
-   owns the bottom edge. That is what lets the timeline run the full width.
+   (see shared/components/Panel), so the timeline is the only thing that owns
+   the bottom edge — the tab bar that used to reserve a 64px band under it is
+   gone with the modes it switched between.
 
-   The two bands the bottom-anchored map controls have to clear: */
+   The one band the bottom-anchored map controls have to clear: */
 :root {
-  /* Height reserved by the mobile bottom tab bar (0 on desktop, where the
-     switcher is a floating pill). Everything docked at the bottom sits on top
-     of this band and the floating map controls add it into their bottom offset,
-     so nothing hides behind the nav. Includes the home-indicator safe area. */
-  --tabbar-height: 0px;
   /* Height of the docked transport bar, measured and published by the component
-     that renders it (usePublishedHeight) because it depends on the mode, on
-     whether there are frames at all, and on how its rows wrap. 0 when absent. */
+     that renders it (usePublishedHeight) because it depends on whether there are
+     frames at all and on how its rows wrap. 0 when absent. */
   --timeline-height: 0px;
 }
 
 @media (max-width: 768px) {
-  /* Reserve the bottom band for the tab bar. Everything bottom-anchored below
-     adds this in, and the height here must match the rendered nav (its own
-     height is pinned to the same variable, so the two can't drift). */
-  :root {
-    --tabbar-height: calc(64px + env(safe-area-inset-bottom));
-  }
-
   /* The floating summary pills are redundant on mobile — the detail overlay is
      the single source of selection detail — so hide them (Meri's follow/trail
      actions move into the panel header via VesselActions). */
@@ -1495,22 +1601,20 @@ a,
     flex: none;
   }
 
-  /* Bigger tap target, lifted clear of the timeline AND the tab bar. Both bands
-     stack up from the bottom edge; --tabbar-height already carries the
-     safe-area inset. */
+  /* Bigger tap target, lifted clear of the timeline. */
   .locate-control {
     width: 44px;
     height: 44px;
-    bottom: calc(var(--timeline-height) + var(--tabbar-height) + 16px);
+    bottom: calc(var(--timeline-height) + 16px);
   }
 
   .locate-error {
-    bottom: calc(var(--timeline-height) + var(--tabbar-height) + 68px);
+    bottom: calc(var(--timeline-height) + 68px);
   }
 
   /* Keep the required attribution visible above the timeline. */
   .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib {
-    margin-bottom: calc(var(--timeline-height) + var(--tabbar-height) + 8px);
+    margin-bottom: calc(var(--timeline-height) + 8px);
   }
 
   /* --timeline-height steps when the transport bar appears, disappears or
@@ -1528,180 +1632,22 @@ a,
   }
 
   /* --- the timeline ---
-     Docked full-bleed on top of the tab bar rather than floating as a centred
-     pill. The scrubber is the control a phone visitor actually drags, so it gets
-     the whole width of the screen (the per-mode row layout is in tutka.css). */
+     Docked full-bleed on the bottom edge rather than floating as a centred pill.
+     The scrubber is the control a phone visitor actually drags, so it gets the
+     whole width of the screen (the row layout is in radar/radar.css). It used to
+     rest on the tab bar; with that gone it reaches the edge itself, and carries
+     the home-indicator inset that the bar used to. */
   .replay-bar {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: var(--tabbar-height);
+    bottom: 0;
     width: auto;
     transform: none;
-    padding: 8px 10px 10px;
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
     border-radius: 14px 14px 0 0;
     border-bottom: none;
     box-shadow: 0 -8px 28px -14px rgba(0, 0, 0, 0.6);
   }
-
-  /* The mode switcher's transformation into a bottom tab bar lives in its own
-     media block after the desktop rules below — equal-specificity overrides
-     must come later in source order to win. */
 }
 
-/* ---------- Mode switcher (Meri / Raide / Tie) ---------- */
-
-.mode-switcher {
-  position: absolute;
-  z-index: 12;
-  top: 14px;
-  left: 14px;
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-glow);
-  border-radius: 10px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
-  /* Active-tab accent, keyed to the current mode via data-mode. Each mode's own
-     chrome (panel titles, markers) already uses these hues, so the tab agrees
-     with the mode it selects. Consumed by the mobile bottom bar; desktop keeps
-     its teal pill below. */
-  --switch-accent: var(--accent-teal);
-}
-
-.mode-switcher[data-mode='raide'] {
-  --switch-accent: #2ecc71;
-}
-
-.mode-switcher[data-mode='tie'] {
-  --switch-accent: #38bdf8;
-}
-
-:root[data-theme='light'] .mode-switcher[data-mode='raide'] {
-  --switch-accent: #0e8a48;
-}
-
-:root[data-theme='light'] .mode-switcher[data-mode='tie'] {
-  --switch-accent: #0369a1;
-}
-
-/* The per-mode glyph is a mobile-only affordance; the desktop switcher is a
-   text pill. Hidden here, revealed in the phone bottom-bar rules. */
-.mode-switcher__icon {
-  display: none;
-}
-
-.mode-switcher__btn {
-  appearance: none;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 5px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.mode-switcher__btn:hover:not(:disabled):not(.mode-switcher__btn--active) {
-  background: var(--bg-button-hover);
-  color: var(--text-primary);
-}
-
-.mode-switcher__btn--active {
-  background: var(--bg-card);
-  border-color: var(--border-focus);
-  color: var(--accent-teal);
-}
-
-.mode-switcher__btn:disabled {
-  color: var(--text-muted);
-  opacity: 0.45;
-  cursor: default;
-}
-
-/* ---- Mobile: the switcher becomes the primary bottom navigation ----
-   A fixed, thumb-zone tab bar spanning the full width. Placed after the desktop
-   rules above so these equal-specificity overrides win on phones. It sits above
-   the timeline (z 12) and the panel overlays (z 15) so it is always reachable;
-   they end where it begins (bottom/inset: var(--tabbar-height)) rather than
-   running under it, so nothing overlaps. */
-@media (max-width: 768px) {
-  .mode-switcher {
-    position: fixed;
-    top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 20;
-    height: var(--tabbar-height);
-    box-sizing: border-box;
-    gap: 0;
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-    border: none;
-    border-top: 1px solid var(--border-glow);
-    border-radius: 0;
-    /* Opaque, and no backdrop blur: the timeline's rounded top edge rests right
-       on this band, and a see-through nav would show it bleeding through. */
-    background: var(--bg-bar);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: 0 -8px 28px -12px rgba(0, 0, 0, 0.55);
-  }
-
-  .mode-switcher__btn {
-    flex: 1;
-    flex-direction: column;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 4px 0;
-    border-radius: 12px;
-    font-size: 0.68rem;
-  }
-
-  .mode-switcher__icon {
-    display: grid;
-    place-items: center;
-    width: 46px;
-    height: 26px;
-    border-radius: 999px;
-    transition: background 0.2s, transform 0.15s;
-  }
-
-  /* Touch has no hover, so the press itself has to answer. */
-  .mode-switcher__btn:active:not(:disabled) .mode-switcher__icon {
-    transform: scale(0.9);
-    background: var(--bg-button-hover);
-  }
-
-  .mode-switcher__icon svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  /* Active tab: the icon pill and label take the current mode's accent, so the
-     colour and the position both say where you are. Undo the desktop pill's
-     filled background/border — on the bar only the pill behind the icon fills. */
-  .mode-switcher__btn--active {
-    background: transparent;
-    border-color: transparent;
-    color: var(--switch-accent);
-  }
-
-  .mode-switcher__btn--active .mode-switcher__icon {
-    background: color-mix(in srgb, var(--switch-accent) 15%, transparent);
-  }
-
-  .mode-switcher__btn:hover:not(:disabled):not(.mode-switcher__btn--active) {
-    background: transparent;
-    color: var(--text-primary);
-  }
-}

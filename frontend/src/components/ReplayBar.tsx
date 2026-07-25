@@ -1,8 +1,8 @@
 import React from 'react';
 import { Pause, Play, Radio, SkipBack, SkipForward } from 'lucide-react';
-import { usePublishedHeight } from '../../../shared/hooks/usePublishedHeight';
-import { clockDateTime, clockTime } from '../lib/api';
-import type { RadarLoop } from '../hooks/useRadarLoop';
+import { usePublishedHeight } from '../shared/hooks/usePublishedHeight';
+import { clockDateTime, clockTime } from '../radar/api';
+import type { RadarLoop } from '../radar/useRadarLoop';
 
 const SPEEDS = [2, 4, 8];
 

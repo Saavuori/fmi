@@ -91,9 +91,17 @@ func (h *Handlers) VersionHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
+// Registrar is a mode-independent service that mounts its own routes. Place
+// search is one: it has no poller and no snapshot, so it reports no health and
+// is not a Mode, but it still needs an endpoint.
+type Registrar interface {
+	Register(mux *http.ServeMux)
+}
+
 // NewRouter assembles the shared mux: global endpoints, each mode's routes
-// under /api/<name>/, and the embedded frontend as the fallback.
-func NewRouter(h *Handlers) *http.ServeMux {
+// under /api/<name>/, any extra services, and the embedded frontend as the
+// fallback.
+func NewRouter(h *Handlers, extra ...Registrar) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", h.Health)
@@ -102,6 +110,9 @@ func NewRouter(h *Handlers) *http.ServeMux {
 
 	for _, m := range h.modes {
 		m.Register(mux)
+	}
+	for _, e := range extra {
+		e.Register(mux)
 	}
 
 	mux.HandleFunc("/", ServeStatic)

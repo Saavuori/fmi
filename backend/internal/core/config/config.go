@@ -9,10 +9,12 @@ import (
 	"strings"
 )
 
-// FMIUserAgent identifies this app to the Finnish Meteorological Institute's
-// open-data services. FMI does not mandate a header the way Digitraffic does,
-// but sending a descriptive agent with a contact URL is the same courtesy: it
-// lets them tell who is generating load and reach us before throttling it.
+// FMIUserAgent identifies this app to every upstream it calls — the Finnish
+// Meteorological Institute's open-data services, and OpenStreetMap's Nominatim
+// behind place search. FMI does not mandate a header the way Digitraffic does
+// (Nominatim does), but sending a descriptive agent with a contact URL is the
+// same courtesy either way: it lets them tell who is generating load and reach
+// us before throttling it.
 const FMIUserAgent = "Saavuori/Tutka (+https://github.com/Saavuori/fmi)"
 
 type Config struct {

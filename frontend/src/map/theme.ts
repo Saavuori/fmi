@@ -1,6 +1,6 @@
 // Theme identity shared by the CSS variables (via the data-theme attribute the
 // app shell sets on <html>) and the MapLibre basemap. The shell owns the toggle
-// and persistence; this module only maps the theme to tutka's map colours.
+// and persistence; this module only maps the theme to the map's own colours.
 
 export type Theme = 'dark' | 'light';
 

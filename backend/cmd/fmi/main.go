@@ -12,6 +12,7 @@ import (
 
 	"fmi/internal/core/cache"
 	"fmi/internal/core/config"
+	"fmi/internal/core/places"
 	"fmi/internal/core/server"
 	"fmi/internal/havainnot"
 	"fmi/internal/salama"
@@ -66,16 +67,22 @@ func main() {
 	}
 	defer havainnotService.Stop()
 
-	// 5. Assemble the shared router: global endpoints + each mode's routes.
+	// 5. Place search. Not a mode: no poller, no snapshot, nothing to report to
+	// health — it answers a search or it does not. It is also the only endpoint
+	// a visitor can cause an upstream request from, which is why it caches and
+	// paces (see the package doc).
+	placesService := places.NewService(liveCache)
+
+	// 6. Assemble the shared router: global endpoints + each mode's routes.
 	handlers := server.NewHandlers(liveCache, tutkaService, salamaService, havainnotService)
-	router := server.NewRouter(handlers)
+	router := server.NewRouter(handlers, placesService)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,
 	}
 
-	// 6. Handle OS shutdown signals for graceful termination
+	// 7. Handle OS shutdown signals for graceful termination
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, os.Interrupt, syscall.SIGTERM)
 

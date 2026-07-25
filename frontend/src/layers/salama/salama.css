@@ -1,0 +1,54 @@
+/* The lightning overlay.
+ *
+ * Lightning used to be a mode with its own app root, and .mode-salama redefined
+ * --accent for the whole screen. As a layer it only owns its own block in the
+ * layers panel, so the accent is scoped to that block — the radar accent still
+ * governs everything outside it. */
+
+.layer-block--salama {
+  --accent: #fbbf24;
+  --accent-alt: #f472b6;
+}
+
+:root[data-theme='light'] .layer-block--salama {
+  --accent: #b45309;
+  --accent-alt: #a21caf;
+}
+
+/* Re-tint the shared chrome inside the block, overriding the radar accent the
+   app root sets. Equal specificity to `.weather-map .layer-toggle.on`, so this
+   wins on source order — salama.css is imported after radar.css. */
+.weather-map .layer-block--salama .layer-toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* The two type swatches mirror how the map draws each kind: a ground strike is a
+   filled dot, an intra-cloud flash is a ring. */
+.salama-swatch--ground {
+  background: var(--accent);
+}
+
+.salama-swatch--cloud {
+  background: transparent;
+  border: 1.5px solid var(--accent);
+}
+
+/* The popup is a MapLibre child of the map container, outside the panel block
+   that scopes --accent, so it carries the lightning colours itself. */
+.strike-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.strike-popup strong {
+  font-size: 12px;
+  color: #b45309;
+}
+
+:root[data-theme='dark'] .strike-popup strong {
+  color: #fbbf24;
+}
