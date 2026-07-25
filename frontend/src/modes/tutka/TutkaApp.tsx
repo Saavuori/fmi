@@ -188,7 +188,7 @@ function TutkaApp({ theme, onToggleTheme }: TutkaAppProps) {
         />
       )}
 
-      <ReplayBar loop={loop} />
+      <ReplayBar loop={loop} windowHours={windowHours} />
 
       {/* Cold start is a loading state, not an error: the backend is still filling
           its archive from FMI and will have frames within a minute or two. */}

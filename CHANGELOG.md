@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Tutka is a live weather map of Finland built on the Finnish Meteorological Institute's open data, and is a sibling of the Fintraffic live traffic map — same Go + React/MapLibre single-container architecture, same CI-owned versioning.
 
+## [v0.1.1] - 2026-07-25
+
+### Fixed
+- **The radar timeline no longer opens a hole in the middle while the archive fills**: the boot-time backfill asked FMI for history in day-long slices newest-slice-first, but then fetched the frames *within* each slice oldest-first. So a fresh deploy held yesterday afternoon plus the live poller’s last half hour, with a ten-hour gap between them — precisely the stretch a visitor scrubs first, and indistinguishable from the feed being broken. Frames are now fetched newest-first throughout, so the archive stays contiguous backwards from the present and only ever reaches further back.
+- **A short timeline says it is short**: the transport bar now reports how far back the history actually goes when it falls well short of the selected window. Correct-but-still-filling looked exactly like missing data, which is what made the gap above so hard to read.
+
 ## [v0.1.0] - 2026-07-25
 
 ### Added

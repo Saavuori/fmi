@@ -231,8 +231,26 @@ func (s *Service) backfillAll(ctx context.Context) {
 	log.Printf("Tutka: backfill complete, %d frames recovered", s.backfilled.Load())
 }
 
-// backfillProduct fills one product's history, newest slice first so the most
-// useful data lands soonest.
+// backfillOrder is the sequence a chunk's frames should be fetched in:
+// newest first.
+//
+// This matters more than it looks. discoverFrames returns frames oldest-first,
+// and fetching them in that order fills a 24-hour chunk *forward* from its far
+// end — so for the first hour of a deploy the archive holds yesterday afternoon
+// plus the live poller's last half hour, with a ten-hour hole between them. The
+// timeline looks broken precisely in the region a visitor is most likely to
+// scrub. Fetching newest-first keeps the archive contiguous backwards from now,
+// so it only ever reaches further back.
+func backfillOrder(metas []frameMeta) []frameMeta {
+	out := make([]frameMeta, len(metas))
+	for i, meta := range metas {
+		out[len(metas)-1-i] = meta
+	}
+	return out
+}
+
+// backfillProduct fills one product's history, newest first so the archive stays
+// contiguous backwards from the present rather than growing a hole in the middle.
 func (s *Service) backfillProduct(ctx context.Context, p Product) {
 	horizon := time.Duration(p.RetainHours) * time.Hour
 	if horizon > upstreamHistory {
@@ -262,7 +280,7 @@ func (s *Service) backfillProduct(ctx context.Context, p Product) {
 			continue
 		}
 
-		for _, meta := range metas {
+		for _, meta := range backfillOrder(metas) {
 			if s.store.Has(p.ID, meta.Time) {
 				continue
 			}
