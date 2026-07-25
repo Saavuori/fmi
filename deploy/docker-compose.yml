@@ -1,0 +1,57 @@
+# Production stack for the Tutka FMI weather app (rootless Podman on the Oracle host).
+#
+# TLS termination is NOT here: the Caddy container from the ratikka stack owns
+# :80/:443 on this host and proxies tutka.duckdns.org to this backend
+# over the shared external `web-proxy` network.
+services:
+  fmi-backend:
+    image: ghcr.io/saavuori/fmi:latest
+    container_name: fmi-backend
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://fmi-cache:6379
+      - PORT=8080
+      # Radar frame archive. Frames are files, not database rows: pruning them
+      # must not need scratch space, because this host's root volume runs close
+      # to full.
+      - FRAMES_DIR=/data/frames
+      # Per-product retention in hours. dbz matches the 7 days FMI itself keeps;
+      # rr is held for 2 days because it is a 16-bit product and so roughly twice
+      # the bytes per frame, and the hourly accumulations cover the longer
+      # look-back far more cheaply. Budget at the default grid is ~250-450 MB.
+      - TUTKA_RETENTION_HOURS=dbz=168,rr=48,rr1h=168,rr12h=168,rr24h=168
+      # The canonical grid: EPSG:3857 bbox and mercator metres per pixel. 2000
+      # gives an 800x1475 grid, ~1.0 km on the ground at 60N. Raising the
+      # resolution multiplies both disk use and per-frame render cost.
+      - GRID_BBOX=2000000,8250000,3600000,11200000
+      - GRID_RESOLUTION=2000
+    volumes:
+      # Persist the frame archive across container recreation. `:Z` relabels the
+      # volume for SELinux (Oracle Linux enforces it). Without this mount the
+      # archive directory can't be created and only in-memory frames are served.
+      - fmi-frames:/data:Z
+    networks:
+      - default
+      - web-proxy
+    depends_on:
+      - fmi-cache
+
+  fmi-cache:
+    image: docker.io/library/redis:8-alpine
+    container_name: fmi-cache
+    restart: unless-stopped
+    command: redis-server --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    networks:
+      - default
+
+volumes:
+  # Named volume for the radar frame archive (survives container recreation).
+  fmi-frames:
+
+networks:
+  # `default` must be declared explicitly: the podman-compose on the host errors
+  # with "missing networks: default" when a service names it but the top-level
+  # networks block doesn't define it.
+  default:
+  web-proxy:
+    external: true
