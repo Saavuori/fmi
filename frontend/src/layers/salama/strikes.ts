@@ -1,5 +1,10 @@
 // Mirrors internal/salama/models.go — change one, change both.
 
+// The basemap and theme identity live with the map now that there is only one of
+// it; this module keeps only what is specific to lightning.
+export type { Theme } from '../../map/theme';
+import type { Theme } from '../../map/theme';
+
 export interface Strike {
   latitude: number;
   longitude: number;
@@ -18,13 +23,6 @@ export interface StrikesResponse {
   updated: number;
   attribution: string;
 }
-
-export type Theme = 'dark' | 'light';
-
-export const BASEMAP_STYLES: Record<Theme, string> = {
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-};
 
 /**
  * Age bands, newest first. Lightning is only interesting in relation to now, so
@@ -94,3 +92,23 @@ export function countByBand(strikes: Strike[], nowSeconds: number): number[] {
   for (const s of strikes) counts[ageBandIndex(s, nowSeconds)] += 1;
   return counts;
 }
+
+/**
+ * What the layer knows and the panel hosting its toggle has to show. It lives
+ * here rather than beside the component so the component file exports nothing
+ * but the component (which is what keeps fast refresh working).
+ */
+export interface SalamaState {
+  data: StrikesResponse | null;
+  coldStart: boolean;
+  error: string | null;
+  /** Strike count per AGE_BANDS entry, recounted as they age. */
+  counts: number[];
+}
+
+export const EMPTY_SALAMA_STATE: SalamaState = {
+  data: null,
+  coldStart: true,
+  error: null,
+  counts: AGE_BANDS.map(() => 0),
+};

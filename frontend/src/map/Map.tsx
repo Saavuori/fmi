@@ -1,18 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { type GridInfo } from '../lib/api';
-import { type Theme, BASEMAP_STYLES, PROBE_COLORS } from '../lib/theme';
-import { LocateControl } from '../../../shared/components/LocateControl';
+import { type GridInfo } from '../radar/api';
+import { type Theme, BASEMAP_STYLES, PROBE_COLORS } from './theme';
+import { PROBE_LAYER, RADAR_LAYER, beforeLayer } from './layers';
+import { LocateControl } from '../shared/components/LocateControl';
 
 const RADAR_SOURCE = 'radar';
-const RADAR_LAYER = 'radar-raster';
 const PROBE_SOURCE = 'probe';
-const PROBE_LAYER = 'probe-point';
 
 interface MapProps {
   grid: GridInfo | null;
-  /** URL of the frame to display, or null while there is nothing to show. */
+  /** URL of the radar frame to display, or null while there is nothing to show. */
   frameUrl: string | null;
   opacity: number;
   theme: Theme;
@@ -20,6 +19,19 @@ interface MapProps {
   /** The point being read out, drawn as a pin. */
   probe: { lat: number; lon: number } | null;
   onPickPoint: (lngLat: { lat: number; lon: number }) => void;
+  /**
+   * Called with the map every time it has a style that will accept sources —
+   * once on load, and again after each theme swap with a bumped epoch. Overlay
+   * layers key their install effect on the epoch, which is what rebuilds them
+   * after setStyle() throws every custom source away.
+   */
+  onStyleReady: (map: maplibregl.Map, epoch: number) => void;
+  /**
+   * Layer ids the overlays own. A click that landed on one of these belongs to
+   * that overlay — the station it hit, say — so it must not also drop a radar
+   * probe pin behind the panel that is about to open.
+   */
+  overlayLayerIds: string[];
 }
 
 /** MapLibre wants the image corners as a 4-tuple of [lon, lat]. The backend
@@ -35,6 +47,8 @@ const Map: React.FC<MapProps> = ({
   attribution,
   probe,
   onPickPoint,
+  onStyleReady,
+  overlayLayerIds,
 }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -51,6 +65,8 @@ const Map: React.FC<MapProps> = ({
   const themeRef = useRef(theme);
   const probeRef = useRef(probe);
   const onPickRef = useRef(onPickPoint);
+  const onStyleReadyRef = useRef(onStyleReady);
+  const overlayLayersRef = useRef(overlayLayerIds);
   useEffect(() => {
     gridRef.current = grid;
     frameUrlRef.current = frameUrl;
@@ -58,6 +74,8 @@ const Map: React.FC<MapProps> = ({
     themeRef.current = theme;
     probeRef.current = probe;
     onPickRef.current = onPickPoint;
+    onStyleReadyRef.current = onStyleReady;
+    overlayLayersRef.current = overlayLayerIds;
   });
 
   // Theme whose basemap style is currently loaded, so the theme effect can tell a
@@ -66,6 +84,8 @@ const Map: React.FC<MapProps> = ({
   // False while a style swap is in flight: an update that lands mid-swap must not
   // touch a style that is about to be thrown away.
   const styleReadyRef = useRef(false);
+  // Bumped on every style load and handed to the overlays, which rebuild on it.
+  const epochRef = useRef(0);
   // Set by the mount effect so the theme effect can rebuild what setStyle
   // discarded.
   const installRef = useRef<(() => void) | null>(null);
@@ -101,20 +121,23 @@ const Map: React.FC<MapProps> = ({
           url,
           coordinates: g.corners as Corners,
         });
-        m.addLayer({
-          id: RADAR_LAYER,
-          type: 'raster',
-          source: RADAR_SOURCE,
-          paint: {
-            'raster-opacity': opacityRef.current,
-            // The frames are pre-rendered at a fixed resolution, so let the GPU
-            // smooth them when zoomed in rather than showing 2 km squares.
-            'raster-resampling': 'linear',
-            // Cross-fading between zoom levels has nothing to fade between for a
-            // single image and only adds a flash on update.
-            'raster-fade-duration': 0,
+        m.addLayer(
+          {
+            id: RADAR_LAYER,
+            type: 'raster',
+            source: RADAR_SOURCE,
+            paint: {
+              'raster-opacity': opacityRef.current,
+              // The frames are pre-rendered at a fixed resolution, so let the GPU
+              // smooth them when zoomed in rather than showing 2 km squares.
+              'raster-resampling': 'linear',
+              // Cross-fading between zoom levels has nothing to fade between for a
+              // single image and only adds a flash on update.
+              'raster-fade-duration': 0,
+            },
           },
-        });
+          beforeLayer(m, RADAR_LAYER)
+        );
       }
 
       if (!m.getSource(PROBE_SOURCE)) {
@@ -135,6 +158,10 @@ const Map: React.FC<MapProps> = ({
         });
         syncProbe(m, probeRef.current);
       }
+
+      // The overlays rebuild off this, and beforeLayer() places each of them
+      // relative to what is already mounted — so it has to come last.
+      onStyleReadyRef.current(m, ++epochRef.current);
     };
     installRef.current = install;
 
@@ -144,8 +171,11 @@ const Map: React.FC<MapProps> = ({
     });
 
     // Tapping the map picks the point to read out. The radar layer is not
-    // queryable, so this is a plain map click rather than a feature query.
+    // queryable, so this is a plain map click — but an overlay's features are, and
+    // a tap that hit one of those is that overlay's to answer.
     m.on('click', e => {
+      const overlays = overlayLayersRef.current.filter(id => m.getLayer(id));
+      if (overlays.length && m.queryRenderedFeatures(e.point, { layers: overlays }).length) return;
       onPickRef.current({ lat: e.lngLat.lat, lon: e.lngLat.lng });
     });
 

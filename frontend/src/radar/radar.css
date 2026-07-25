@@ -1,33 +1,33 @@
-/* Tutka (radar) mode.
+/* The radar base layer and the map shell.
  *
  * The shared index.css owns the glass chrome — panels, headers, layer toggles,
  * the transport bar, scrollbars, the mobile sheet geometry. Everything here is
- * either scoped under .mode-tutka or uses a radar-unique class name, so nothing
- * leaks into the other modes. */
+ * either scoped under .weather-map — the single app root, which is also where
+ * the shared accent is defined — or uses a radar-unique class name. */
 
-.mode-tutka {
+.weather-map {
   /* The generic accent every piece of shared chrome tints itself with. Radar
      reads as blue-violet rather than the marine teal of the sibling app. */
   --accent: #60a5fa;
   --accent-alt: #a78bfa;
 }
 
-:root[data-theme='light'] .mode-tutka {
+:root[data-theme='light'] .weather-map {
   --accent: #2563eb;
   --accent-alt: #7c3aed;
 }
 
 /* Re-tint the shared chrome that hardcodes teal. */
-.mode-tutka .panel-title {
+.weather-map .panel-title {
   color: var(--accent);
 }
 
-.mode-tutka .conn-dot {
+.weather-map .conn-dot {
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent);
 }
 
-.mode-tutka .layer-toggle.on {
+.weather-map .layer-toggle.on {
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -36,26 +36,26 @@
 
 /* Products carry a unit alongside the label, so they get a full-width row each
    rather than the shared two-up grid. */
-.mode-tutka .radar-products {
+.weather-map .radar-products {
   grid-template-columns: 1fr;
 }
 
-.mode-tutka .radar-products .layer-toggle {
+.weather-map .radar-products .layer-toggle {
   justify-content: space-between;
 }
 
-.mode-tutka .radar-unit {
+.weather-map .radar-unit {
   font-size: 10px;
   letter-spacing: 0.04em;
   color: var(--text-muted);
   text-transform: none;
 }
 
-.mode-tutka .radar-windows {
+.weather-map .radar-windows {
   grid-template-columns: repeat(5, 1fr);
 }
 
-.mode-tutka .radar-windows .layer-toggle {
+.weather-map .radar-windows .layer-toggle {
   justify-content: center;
   padding-inline: 4px;
 }
@@ -134,25 +134,25 @@
 
 /* The shared transport hardcodes the marine teal, so re-tint it to the mode
    accent the rest of the chrome uses. */
-.mode-tutka .replay-play {
+.weather-map .replay-play {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--accent);
 }
 
-.mode-tutka .replay-play:hover:not(:disabled) {
+.weather-map .replay-play:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 26%, transparent);
 }
 
-.mode-tutka .replay-scrubber::-webkit-slider-thumb {
+.weather-map .replay-scrubber::-webkit-slider-thumb {
   background: var(--accent);
 }
 
-.mode-tutka .replay-scrubber::-moz-range-thumb {
+.weather-map .replay-scrubber::-moz-range-thumb {
   background: var(--accent);
 }
 
-.mode-tutka .radar-step {
+.weather-map .radar-step {
   flex: 0 0 auto;
 }
 

@@ -5,14 +5,16 @@
    The mobile panel is a full-screen overlay, not a bottom sheet. There is no
    drag, no snap point and no resting height, which means nothing has to be
    published back to the layout: the bottom edge of the screen belongs to the
-   tab bar and the timeline alone. */
+   timeline alone. */
 
 @media (max-width: 768px) {
   .mobile-panel {
     position: fixed;
-    /* Stops at the tab bar so the mode switcher stays reachable — the overlay is
-       a view of one mode, not a modal that traps the visitor in it. */
-    inset: 0 0 var(--tabbar-height);
+    /* The whole screen. It used to stop short of the bottom tab bar so the mode
+       switcher stayed reachable; with the modes folded into layers there is
+       nothing underneath to keep reachable, and the panel's own header closes
+       it. */
+    inset: 0;
     z-index: 15;
     box-sizing: border-box;
     display: flex;

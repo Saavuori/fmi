@@ -1,16 +1,20 @@
 # Tutka HTTP API
 
-All responses are JSON unless noted, sent with `Access-Control-Allow-Origin: *`.
-There is no authentication.
+All responses are JSON unless noted, sent with `Access-Control-Allow-Origin: *` —
+except `/api/places`, which is same-origin only, because it spends a shared rate
+budget against a volunteer-run service rather than serving open data. There is no
+authentication.
 
 **Cold start.** A mode that has not completed its first successful poll answers
 `503` with `data not available yet`. This is a documented loading state, not an
 error: the frontend shows a spinner for it. It matters most for the radar, whose
 first frame lands within about a minute of boot.
 
-**Attribution.** Every mode returns an `attribution` string. The data is the
-Finnish Meteorological Institute's open data under CC BY 4.0, so displaying it is a
-licence condition rather than a courtesy.
+**Attribution.** Every endpoint returns an `attribution` string, and displaying it
+is a licence condition rather than a courtesy. The weather data is the Finnish
+Meteorological Institute's open data under CC BY 4.0; place search returns
+OpenStreetMap's, under ODbL, which is why it carries its own string rather than
+the shared one.
 
 ---
 
@@ -20,6 +24,7 @@ licence condition rather than a courtesy.
 |---|---|---|
 | GET | `/api/health` | Aggregate health, with each mode's own report under `modes.<name>` |
 | GET | `/api/version` | Build `version`, `build_date`, `git_sha` (injected via ldflags) |
+| GET | `/api/places` | Place search — name in, map location out |
 | GET | `/metrics` | Prometheus metrics |
 | GET | `/` | The embedded SPA |
 
@@ -57,6 +62,45 @@ licence condition rather than a courtesy.
 `poll_age_sec` is `-1` until a mode's first successful poll. Watch `disk_bytes`:
 the archive grows for its first week and settles around 650 MB at the default grid
 and retention.
+
+Place search is absent from this report on purpose: it has no poller and no
+snapshot, so there is no freshness to describe — it answers a search or it does
+not.
+
+### GET /api/places
+
+Finds a Finnish place by name. This is the **only** endpoint a visitor can cause
+an outbound request from, and the only one not serving FMI data: results come from
+OpenStreetMap's Nominatim, cached here for 24 hours and paced to at most one
+upstream request per second.
+
+| Parameter | Meaning |
+|---|---|
+| `q` | Free-text place name, 2–80 characters (required) |
+
+```json
+{
+  "results": [
+    {
+      "name": "Kaisaniemi",
+      "detail": "Helsinki",
+      "latitude": 60.1731823,
+      "longitude": 24.9464005,
+      "zoom": 13
+    }
+  ],
+  "attribution": "© OpenStreetMap contributors (ODbL), Nominatim"
+}
+```
+
+At most six results, Finland only. `detail` is the town or region that tells two
+same-named places apart, and `zoom` is what to fly to for the kind of thing that
+was found — a *maakunta* and a street do not want the same frame.
+
+`400` for a query outside the length bounds; `429` (with `Retry-After`) when the
+rate gate is more than three seconds deep, which is a request to try again rather
+than a failure; `502` if Nominatim itself could not be reached. No matches is a
+`200` with an empty `results`, and is cached like any other answer.
 
 ---
 

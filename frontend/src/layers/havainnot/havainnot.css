@@ -1,0 +1,54 @@
+/* The weather-station overlay.
+ *
+ * Observations used to be a mode with its own app root, and .mode-havainnot
+ * redefined --accent for the whole screen. As a layer it only owns its block in
+ * the layers panel and the station detail panel, so the accent is scoped to
+ * those — the radar accent still governs everything outside them. */
+
+.layer-block--havainnot,
+.station-detail {
+  --accent: #34d399;
+  --accent-alt: #38bdf8;
+}
+
+:root[data-theme='light'] .layer-block--havainnot,
+:root[data-theme='light'] .station-detail {
+  --accent: #047857;
+  --accent-alt: #0369a1;
+}
+
+/* Equal specificity to `.weather-map .layer-toggle.on`, so this wins on source
+   order — havainnot.css is imported after radar.css. */
+.weather-map .layer-block--havainnot .layer-toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.station-detail .detail-title {
+  color: var(--accent);
+}
+
+/* Ten parameters with units need a full-width row each rather than the shared
+   two-up grid. */
+.obs-params {
+  grid-template-columns: 1fr;
+}
+
+.obs-params .layer-toggle {
+  justify-content: space-between;
+}
+
+.obs-unit {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: none;
+}
+
+/* The series is a scrolling list rather than a chart: readings arrive every ten
+   minutes at differing cadences per parameter, and a line chart would have to
+   invent the gaps. */
+.obs-series {
+  max-height: 240px;
+  overflow-y: auto;
+}

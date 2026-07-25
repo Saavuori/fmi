@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. Tutka is a live weather map of Finland built on the Finnish Meteorological Institute's open data, and is a sibling of the Fintraffic live traffic map — same Go + React/MapLibre single-container architecture, same CI-owned versioning.
 
+## [v0.3.0] - 2026-07-25
+
+### Added
+- **Search for a place**: a search button on the map takes a Finnish place name and flies there. The zoom follows what was found — a *maakunta*, a town and a street do not want the same frame — and each hit is subtitled with its town, because Finland has a Kaisaniemi in Helsinki, three around Jyväskylä and one near Ylivieska, and a list of five identical words is not an answer. Names come from OpenStreetMap through a new `/api/places`, which is the only endpoint in the app a visitor can cause an outbound request from: it is not weather data and cannot be polled in advance. It caches every answer for a day, paces itself to one upstream request a second, and searches when you submit rather than as you type, which is what their usage policy asks for.
+- **Lightning over the rain that is making it**: with both drawn on one map, the question "which of these cells is actually electrified" is now something you can look at rather than infer across a tab switch. Likewise the station readings, which used to be a separate screen from the radar sweeping over them.
+
+### Changed
+- **The three modes are one map with layers**: `Salama` and `Havainnot` are no longer separate apps reached from a bottom tab bar — they are overlays over the radar, switched on from the one panel, and which ones you leave on is remembered. The panel shows each layer's own controls only while that layer is on, so an unused layer costs one row rather than a screenful of parameter buttons, and a layer that is off makes no requests at all.
+- **The bottom of a phone screen is the map's again**: the tab bar reserved a 64px band across every screen for navigation between three things nobody wanted separately. The timeline now reaches the bottom edge itself, and the locate button and attribution sit that much lower.
+- **One readout at a time**: tapping a weather station opens its panel and closes the radar point readout, and tapping the map does the reverse. Both used to be able to claim the same right-hand rail. A tap that lands on a station is the station's alone — it no longer also drops a radar pin behind the panel that just opened.
+
+### Removed
+- **Three MapLibre instances, and three copies of the code that drove them**: each mode mounted its own map and carried its own version of the mount guard, the theme swap and the rebuild that a `setStyle()` demands. There is one map now; a layer says what it draws and when it is on, and the map republishes itself after a style change so the layers can put themselves back. The draw order is a single list rather than an accident of which tab you opened first.
+
 ## [v0.2.0] - 2026-07-25
 
 ### Changed

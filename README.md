@@ -4,8 +4,9 @@
 [![Changelog](https://img.shields.io/badge/changelog-GitHub%20Pages-a78bfa)](https://saavuori.github.io/fmi/)
 
 A live weather map of Finland built on the Finnish Meteorological Institute's open
-data: animated radar composites, lightning strikes, and the automatic weather
-station network — three modes in one app, one container, no build step at runtime.
+data: animated radar composites, with lightning strikes and the automatic weather
+station network as layers you switch on over them — one map, one container, no
+build step at runtime.
 
 Sibling of [Fintraffic](https://github.com/Saavuori/Fintraffic): same Go +
 React/MapLibre architecture, same CI-owned versioning, same deploy.
@@ -18,16 +19,21 @@ backend/
   internal/core/                  # mode-agnostic
     cache/                        # generic TTL key/value: Redis + in-memory fallback
     config/                       # env + .env + flags
-    upstream/                     # FMI HTTP client (User-Agent, gzip unwrap)
+    upstream/                     # HTTP client (User-Agent, gzip unwrap)
     fmiwfs/                       # multipointcoverage parser (shared by 2 modes)
+    places/                       # place search: Nominatim proxy, cached + paced
     server/                       # router, embedded SPA, health/version/metrics
   internal/tutka/                 # radar: grid, palettes, archive, nowcast
   internal/salama/                # lightning
   internal/havainnot/             # weather stations
 frontend/
-  src/App.tsx                     # mode switcher shell, theme owner
-  src/shared/                     # mode-agnostic hooks + components
-  src/modes/{tutka,salama,havainnot}/
+  src/App.tsx                     # shell: theme owner, nothing else
+  src/WeatherMap.tsx              # the app: radar + layer toggles + panels
+  src/map/                        # the one MapLibre instance, basemap, layer order
+  src/radar/                      # radar API client, loop, styles
+  src/layers/{salama,havainnot}/  # overlay layers: own their sources, render no DOM
+  src/components/                 # panels, transport bar
+  src/shared/                     # feature-agnostic hooks + components
 scripts/                          # changelog renderer + Renovate entry generator
 .github/workflows/                # PR checks, release, Pages, Renovate
 deploy/                           # compose + installer + cron updater
@@ -45,9 +51,19 @@ type Mode interface {
 ```
 
 Every mode is poll-style: **pollers write to a Store, handlers only read from the
-Store, and nothing a visitor does triggers an upstream request.**
+Store, and nothing a visitor does triggers an upstream FMI request.**
 
-## ✨ Tutka mode (weather radar)
+The backend still has three modes; the *frontend* no longer does. Radar is the
+base layer and the other two are overlays on the same map, toggled from one panel
+— so a `/api/<mode>/` namespace is an answer the map can draw, not a screen you
+navigate to.
+
+Place search is the one exception to the poll rule, and the only endpoint a
+visitor can cause an outbound request from. It is not FMI data and cannot be
+polled ahead of time, so it caches for a day and paces itself to one upstream
+request per second (see `internal/core/places`).
+
+## ✨ Tutka (weather radar) — the base layer
 
 - **Animated nationwide radar**, 5-minute cadence, scrubbable over the full week
   FMI retains. Play/pause, step, speed, and a live pill that goes dark when you
@@ -64,15 +80,16 @@ Store, and nothing a visitor does triggers an upstream request.**
 - **"No rain" and "no radar coverage" are never merged.** Both draw transparent,
   but only the first is evidence of dry weather, and the readout says which.
 
-## ✨ Salama mode (lightning)
+## ✨ Salama (lightning) — an overlay
 
 Strikes from the last two hours, coloured by age so the eye lands on where the
 storm *is* and the older strikes read as its track. Cloud-to-ground strikes are
 filled dots and intra-cloud flashes are rings — only the former is a ground-level
 hazard. Peak current and multiplicity on tap. An empty map is the normal state in
-Finland, and the panel says so rather than looking broken.
+Finland, and the panel says so rather than looking broken. Over the radar it is a
+different question answered: which of the cells on screen is actually electrified.
 
-## ✨ Havainnot mode (weather stations)
+## ✨ Havainnot (weather stations) — an overlay
 
 Roughly 194 automatic stations, with markers coloured and labelled by whichever of
 ten parameters you pick — temperature, wind, gusts, direction, humidity, hourly
@@ -80,18 +97,28 @@ rain, dew point, pressure, visibility, snow depth. Stations that do not measure 
 selected parameter are left off the map rather than drawn as grey noise. Tap for
 every reading plus the last three hours.
 
+## ✨ Place search
+
+A search button on the map takes a Finnish place name and flies there, at a zoom
+chosen for what was found — a *maakunta* and a street are both "places" and do not
+want the same frame. Results are subtitled with their town so the several
+Kaisaniemis can be told apart.
+
+Both layers start switched off, and which ones are on is remembered.
+
 ## Data sources
 
-All data is the Finnish Meteorological Institute's open data, licensed
-**CC BY 4.0**, and the attribution is shown in the map's attribution control on
-every mode. No API key is needed.
+All weather data is the Finnish Meteorological Institute's open data, licensed
+**CC BY 4.0**, credited in the map's attribution control. No API key is needed for
+anything here.
 
-| Mode | Service | Used for |
+| Layer | Service | Used for |
 |---|---|---|
 | Tutka | `opendata.fmi.fi/wfs`, stored queries `fmi::radar::composite::{dbz,rr,rr1h,rr12h,rr24h}` | Which frames exist, and their value scaling |
 | Tutka | `openwms.fmi.fi/geoserver/Radar/wms` GetMap, `styles=raster&format=image/geotiff` | The raster values themselves |
 | Salama | `fmi::observations::lightning::multipointcoverage` | Strike position, time, current, polarity |
 | Havainnot | `fmi::observations::weather::multipointcoverage` | Station readings and metadata |
+| Place search | `nominatim.openstreetmap.org/search` | Name → coordinates. OpenStreetMap data, **ODbL**, credited in the results list |
 
 ### Why the app re-serves radar images instead of proxying FMI
 
@@ -106,6 +133,15 @@ paces itself at one fetch per 1.5 s.
 Fetching the raw rasters rather than FMI's rendered images is also what makes the
 app work at all: their default rendering paints "no echo" as opaque white, which
 would hide the basemap, and a colour cannot be converted back into a dBZ figure.
+
+### Why place search goes through the backend
+
+Nominatim is free and needs no key, and asks in return for a descriptive
+User-Agent, no more than one request a second, no per-keystroke autocomplete, and
+results cached rather than re-asked. Proxying it is what makes all four possible:
+the browser searches on submit, the backend serialises every outbound call through
+a one-per-second gate, and answers — including "no matches" — are served from the
+shared cache for a day.
 
 ## HTTP API
 

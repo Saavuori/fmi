@@ -1,8 +1,8 @@
 import React from 'react';
 import { MapPin, X } from 'lucide-react';
-import { stopPanelClick } from '../../../shared/hooks/useCollapsiblePanel';
-import { Panel } from '../../../shared/components/Panel';
-import { type Nowcast, type PointResponse, bearingText, clockTime, sampleText } from '../lib/api';
+import { stopPanelClick } from '../shared/hooks/useCollapsiblePanel';
+import { Panel } from '../shared/components/Panel';
+import { type Nowcast, type PointResponse, bearingText, clockTime, sampleText } from '../radar/api';
 
 interface PointPanelProps {
   point: PointResponse | null;

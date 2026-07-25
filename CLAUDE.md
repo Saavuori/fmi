@@ -3,30 +3,50 @@
 ## What this is
 
 Tutka — one live weather map of Finland on the Finnish Meteorological Institute's
-open data, with three modes: **Tutka** (radar composites, animated), **Salama**
-(lightning strikes), **Havainnot** (automatic weather stations). Go backend +
-React 19/Vite/MapLibre frontend, shipped as a single container with the frontend
-embedded via `go:embed`. Deliberate sibling of the Fintraffic live traffic map —
-same architecture, same CI-owned versioning, same deploy.
+open data: **Tutka** (radar composites, animated) as the base layer, with
+**Salama** (lightning strikes) and **Havainnot** (automatic weather stations) as
+overlays switched on over it, plus place search. Go backend + React 19/Vite/
+MapLibre frontend, shipped as a single container with the frontend embedded via
+`go:embed`. Deliberate sibling of the Fintraffic live traffic map — same
+architecture, same CI-owned versioning, same deploy.
 
 ## Architecture
 
 - One Go binary (`backend/cmd/fmi`). `internal/core/` is mode-agnostic: `cache`
   (generic TTL key/value over Redis with an in-memory fallback), `config`,
-  `upstream` (FMI HTTP client), `fmiwfs` (the multipointcoverage parser, shared
-  because lightning and observations use the same encoding), `server` (router,
-  embedded SPA, global `/api/health` + `/api/version` + `/metrics`).
+  `upstream` (HTTP client), `fmiwfs` (the multipointcoverage parser, shared
+  because lightning and observations use the same encoding), `places` (the
+  geocode proxy behind place search), `server` (router, embedded SPA, global
+  `/api/health` + `/api/version` + `/metrics`).
 - Each mode is a package (`internal/tutka/`, `internal/salama/`,
   `internal/havainnot/`) implementing `server.Mode` (`Name`, `Register`, `Health`)
   and mounting routes under `/api/<mode>/`. The global health endpoint aggregates
-  every mode's `Health()` under `modes.<name>`.
+  every mode's `Health()` under `modes.<name>`. A service with routes but no
+  poller (places) is a `server.Registrar` instead — nothing to report to health.
 - Every mode is poll-style: **pollers write to the Store, handlers only read from
-  the Store, and nothing a visitor does triggers an upstream request.** For radar
-  this is not merely tidy — FMI's terms require it (see below).
-- Frontend: `src/App.tsx` is the mode-switcher shell; `src/modes/<mode>/` owns
-  each mode; `src/shared/` holds mode-agnostic hooks/components. No router, no
-  state library — plain hooks. New modes get `src/modes/<mode>/` and an entry in
-  `MODES` in App.tsx.
+  the Store, and nothing a visitor does triggers an upstream FMI request.** For
+  radar this is not merely tidy — FMI's terms require it (see below). Place search
+  is the one visitor-driven upstream call in the system, which is exactly why it
+  caches for a day and paces itself to one request per second.
+- **The backend has modes; the frontend does not.** `src/App.tsx` owns the theme
+  and nothing else; `src/WeatherMap.tsx` is the app. `src/map/` holds the single
+  MapLibre instance, the basemap and `layers.ts` (the draw order every layer
+  inserts itself against). `src/radar/` is the base layer's API client and loop;
+  `src/layers/<name>/` are overlays that own map sources and render no DOM;
+  `src/components/` holds the panels. No router, no state library — plain hooks.
+- **Overlay layers follow one shape** (see `SalamaLayer`): props are
+  `{map, epoch, enabled, theme, onState}`; an install effect keyed on all of those
+  adds the source and layers and returns a teardown; a paint effect declared after
+  it writes the data; state is reported upward for `LayersPanel` to describe. The
+  map lifecycle — mounting, the theme swap, rebuilding what `setStyle()` discarded
+  — belongs to `map/Map.tsx` alone, which republishes `{map, epoch}` on every
+  style load. **A layer must not create its own map.**
+- Layers insert with `beforeLayer(map, id)` rather than appending. Toggles fire in
+  any order, so insertion order says nothing; `DRAW_ORDER` in `map/layers.ts` is
+  the only statement of what is drawn over what.
+- A layer whose features are clickable must be listed in `overlayLayerIds` in
+  `WeatherMap.tsx`, or a tap on one of its features will *also* drop a radar probe
+  pin behind the panel that just opened.
 
 ## FMI data contract — the things that are not guessable
 
@@ -68,8 +88,18 @@ These were established against the live API and are easy to get wrong. **Do not
   the header it added itself. `core/upstream` also unwraps explicitly.
 - **Weather-station sentinels.** Snow depth encodes "no snow" as **−1** and "could
   not determine" as **−3** instead of omitting them. See `havainnot.normalize`.
-- **Attribution is a licence condition.** FMI open data is CC BY 4.0; every mode
-  puts the credit in the map's attribution control.
+- **Attribution is a licence condition.** FMI open data is CC BY 4.0, credited in
+  the map's attribution control. Place search returns *OpenStreetMap* data under
+  ODbL, which is a different licensor and is credited in the results list itself.
+- **Nominatim's `municipality` is not the municipality.** In Finland OSM fills it
+  with the *seutukunta* (sub-region), so Kaisaniemi comes back as "Helsingin
+  seutukunta" while `city` holds "Helsinki". `addressKeys` in `core/places` ranks
+  `city` above it for exactly this reason; there is a test pinning it.
+- **Nominatim's usage policy is the design.** One request per second absolute, a
+  descriptive User-Agent, no per-keystroke autocomplete, cache rather than re-ask.
+  That is why the browser searches on submit, the service serialises through a
+  gate, and results (including empty ones) are cached for a day — and why
+  `/api/places` is the one endpoint without `Access-Control-Allow-Origin: *`.
 - **Rate limits**: 20 000 download and 10 000 view requests/day, 600 per 5 minutes
   combined. Steady state here is ~4 requests per 5 minutes; the boot backfill
   paces itself at one fetch per 1.5 s.
@@ -97,14 +127,16 @@ These were established against the live API and are easy to get wrong. **Do not
   vector describes a front well and scattered convection badly. It is labelled an
   extrapolation, never a forecast.
 
-## Adding a mode
+## Adding a layer
 
 Backend package with a `Service` implementing `server.Mode` — pollers writing typed
 snapshots through a `Store` over the core cache, handlers reading only from the
-store; frontend module under `src/modes/<mode>/` mounted from the shell with theme
-passed down as props, plus a scoped `<mode>.css` (`.mode-<name>` on the app root)
-for what the shared design system doesn't cover. Keep types duplicated
-backend/frontend in sync ("change one, change both").
+store. Frontend: `src/layers/<name>/` with a `<Name>Layer` following the shape
+above, its `<name>.css` scoping `--accent` to `.layer-block--<name>` (**not** to
+the app root — there is one root now and radar owns its accent), a `layer-block`
+in `LayersPanel`, ids in `DRAW_ORDER`, and — if it is clickable — an entry in
+`overlayLayerIds`. Keep types duplicated backend/frontend in sync ("change one,
+change both").
 
 ## Conventions & gotchas
 

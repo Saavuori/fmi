@@ -37,11 +37,21 @@ export interface Snapshot {
   attribution: string;
 }
 
-export type Theme = 'dark' | 'light';
+/**
+ * What the layer knows and the panel hosting its toggle has to show. It lives
+ * here rather than beside the component so the component file exports nothing
+ * but the component (which is what keeps fast refresh working).
+ */
+export interface HavainnotState {
+  snapshot: Snapshot | null;
+  coldStart: boolean;
+  error: string | null;
+}
 
-export const BASEMAP_STYLES: Record<Theme, string> = {
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+export const EMPTY_HAVAINNOT_STATE: HavainnotState = {
+  snapshot: null,
+  coldStart: true,
+  error: null,
 };
 
 /**

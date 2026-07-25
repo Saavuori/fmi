@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type FrameRef, NotReadyError, fetchFrames, frameUrl } from '../lib/api';
+import { type FrameRef, NotReadyError, fetchFrames, frameUrl } from './api';
 
 /** How often to re-check the index for newly published frames. The backend polls
  * FMI every minute, so anything faster only adds requests. */
