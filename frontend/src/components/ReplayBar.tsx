@@ -1,15 +1,14 @@
 import React from 'react';
-import { Pause, Play, Radio, SkipBack, SkipForward } from 'lucide-react';
+import { Pause, Play } from 'lucide-react';
 import { usePublishedHeight } from '../shared/hooks/usePublishedHeight';
-import { clockDateTime, clockTime } from '../radar/api';
+import { WINDOWS } from '../radar/windows';
 import type { RadarLoop } from '../radar/useRadarLoop';
-
-const SPEEDS = [2, 4, 8];
 
 interface ReplayBarProps {
   loop: RadarLoop;
   /** The look-back the viewer asked for, in hours. */
   windowHours: number;
+  onWindowHours: (h: number) => void;
 }
 
 /** Below this fraction of the requested window, say so. The archive fills
@@ -20,33 +19,64 @@ const COVERAGE_NOTE_THRESHOLD = 0.8;
 
 /**
  * The animation transport: play/pause, a scrubber over the loaded window, and the
- * clock of the frame on screen.
+ * look-back that window covers.
  *
- * The clock is the most important element here. A radar animation with no
- * timestamp invites the viewer to read an hour-old frame as current weather, so
- * the time is always visible and the newest frame is labelled as live.
+ * Three controls, deliberately. The step buttons, the live pill and the speed
+ * picker all came out: stepping a frame at a time is what the scrubber does with
+ * a drag, the loop now ends on the newest frame so there is nothing to jump back
+ * to, and playback is fixed at 2 fps because the other rates only made the
+ * animation harder to read. What that room bought is the look-back — 1 h through
+ * 7 vrk, previously two clicks away inside the map menu — sitting next to the
+ * scrubber it governs, which is the one thing here that is genuinely a choice.
  *
- * On a phone the bar is docked full-bleed above the tab bar and the scrubber
- * wraps onto a row of its own (tutka.css), so dragging through time gets the
- * whole width of the screen instead of the gap left between the clock and the
- * speed buttons. Its measured height is published to `--timeline-height` for the
- * map controls that have to sit above it.
+ * The clock is not here either: it is above the map (`FrameClock`), where a
+ * viewer watching the rain move does not have to look down to find out which
+ * moment they are watching.
+ *
+ * On a phone the bar is docked full-bleed along the bottom edge and the window
+ * buttons wrap onto a row of their own (radar.css). Its measured height is
+ * published to `--timeline-height` for the map controls that sit above it.
  */
-export const ReplayBar: React.FC<ReplayBarProps> = ({ loop, windowHours }) => {
-  const { frames, index, current, playing, speed, loadedCount, live } = loop;
+export const ReplayBar: React.FC<ReplayBarProps> = ({ loop, windowHours, onWindowHours }) => {
+  const { frames, index, playing, loadedCount } = loop;
   const barRef = usePublishedHeight('--timeline-height');
 
-  // Below the hook, not above it: an empty archive still has to run every hook
-  // this component declares, and the callback ref publishes 0 when the bar is
-  // absent anyway.
-  if (frames.length === 0) return null;
+  const hasFrames = frames.length > 0;
+  const last = Math.max(frames.length - 1, 0);
+  const loadPercent = hasFrames ? Math.round((loadedCount / frames.length) * 100) : 0;
 
-  const last = frames.length - 1;
-  const loadPercent = frames.length > 0 ? Math.round((loadedCount / frames.length) * 100) : 0;
-
-  const spanHours =
-    (new Date(frames[last].time).getTime() - new Date(frames[0].time).getTime()) / 3_600_000;
+  const spanHours = hasFrames
+    ? (new Date(frames[last].time).getTime() - new Date(frames[0].time).getTime()) / 3_600_000
+    : 0;
   const stillFilling = frames.length > 1 && spanHours < windowHours * COVERAGE_NOTE_THRESHOLD;
+
+  const windowButtons = (
+    <div className="radar-windows-bar" role="group" aria-label="Aikaväli">
+      {WINDOWS.map(w => (
+        <button
+          key={w.hours}
+          className={`radar-window${w.hours === windowHours ? ' radar-window--on' : ''}`}
+          onClick={() => onWindowHours(w.hours)}
+          aria-pressed={w.hours === windowHours}
+          title={`Näytä viimeiset ${w.label}`}
+        >
+          {w.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  // Switching the window empties the frame list until the new one loads. The bar
+  // stays up through that with the window buttons alone, rather than vanishing
+  // out from under the control that was just pressed and stranding the viewer on
+  // a week of frames with no way back.
+  if (!hasFrames) {
+    return (
+      <div className="replay-bar replay-bar--radar replay-bar--empty" ref={barRef}>
+        {windowButtons}
+      </div>
+    );
+  }
 
   return (
     <div className="replay-bar replay-bar--radar" ref={barRef}>
@@ -58,32 +88,6 @@ export const ReplayBar: React.FC<ReplayBarProps> = ({ loop, windowHours }) => {
       >
         {playing ? <Pause size={18} /> : <Play size={18} />}
       </button>
-
-      <button
-        className="icon-btn radar-step"
-        onClick={() => loop.step(-1)}
-        disabled={index === 0}
-        aria-label="Edellinen ruutu"
-        title="Edellinen ruutu"
-      >
-        <SkipBack size={15} />
-      </button>
-      <button
-        className="icon-btn radar-step"
-        onClick={() => loop.step(1)}
-        disabled={index >= last}
-        aria-label="Seuraava ruutu"
-        title="Seuraava ruutu"
-      >
-        <SkipForward size={15} />
-      </button>
-
-      <div className="radar-clock">
-        <span className="replay-clock replay-clock--wide">
-          {current ? clockTime(current.time) : '--:--'}
-        </span>
-        <span className="radar-clock__date">{current ? clockDateTime(current.time) : ''}</span>
-      </div>
 
       <div className="radar-scrub">
         <input
@@ -110,27 +114,7 @@ export const ReplayBar: React.FC<ReplayBarProps> = ({ loop, windowHours }) => {
         )}
       </div>
 
-      <button
-        className={`radar-live${live ? ' radar-live--on' : ''}`}
-        onClick={loop.goLive}
-        title="Siirry uusimpaan"
-      >
-        <Radio size={13} />
-        <span>nyt</span>
-      </button>
-
-      <div className="radar-speeds" role="group" aria-label="Nopeus">
-        {SPEEDS.map(s => (
-          <button
-            key={s}
-            className={`radar-speed${s === speed ? ' radar-speed--on' : ''}`}
-            onClick={() => loop.setSpeed(s)}
-            title={`${s} ruutua sekunnissa`}
-          >
-            {s}×
-          </button>
-        ))}
-      </div>
+      {windowButtons}
     </div>
   );
 };

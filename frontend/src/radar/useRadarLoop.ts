@@ -5,21 +5,25 @@ import { type FrameRef, NotReadyError, fetchFrames, frameUrl } from './api';
  * FMI every minute, so anything faster only adds requests. */
 const INDEX_REFRESH_MS = 60_000;
 
-/** Extra dwell on the newest frame before the loop restarts. Without it the wrap
- * from "now" back to an hour ago reads as a glitch rather than a replay. */
+/** Extra dwell on the newest frame before playback stops. Without it the run ends
+ * the instant the last frame appears, which reads as a stall mid-animation rather
+ * than as "this is now". */
 const END_DWELL_FRAMES = 4;
 
 /** Concurrent image preloads. Enough to fill the loop quickly, few enough that
  * the current frame is not queued behind a dozen others. */
 const PRELOAD_CONCURRENCY = 4;
 
+/** Playback rate, in frames per second. Not adjustable: at five minutes per frame
+ * this is the pace at which a front's movement reads as movement, and a speed
+ * picker only offered viewers a way to make the animation harder to follow. */
+const PLAYBACK_FPS = 2;
+
 export interface RadarLoop {
   frames: FrameRef[];
   index: number;
   current: FrameRef | undefined;
   playing: boolean;
-  /** Frames per second during playback. */
-  speed: number;
   loadedCount: number;
   /** True once there is at least one frame to draw. */
   ready: boolean;
@@ -31,15 +35,17 @@ export interface RadarLoop {
   setIndex: (i: number) => void;
   setPlaying: (p: boolean) => void;
   togglePlaying: () => void;
-  setSpeed: (s: number) => void;
-  /** Jump to the newest frame and resume following new arrivals. */
-  goLive: () => void;
-  step: (delta: number) => void;
 }
 
 /**
  * Drives the radar animation: it keeps the frame index current, preloads the
- * images so playback does not stutter, and advances through them.
+ * images so playback does not stutter, and advances through them once.
+ *
+ * Once, not forever. The run ends on the newest frame and stays there, so a map
+ * nobody is watching is showing the present rather than replaying the past — and
+ * the arrangement that follows from it is that the newest frame is where every
+ * idle state lands: after a run, after a refresh brings a new frame in, after a
+ * scrub to the right-hand end.
  *
  * Preloading is done with plain Image objects rather than by holding decoded
  * bitmaps. Frames are served immutable with a one-year max-age, so warming the
@@ -50,7 +56,6 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
   const [frames, setFrames] = useState<FrameRef[]>([]);
   const [index, setIndexState] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [speed, setSpeed] = useState(4);
   const [loadedCount, setLoadedCount] = useState(0);
   const [coldStart, setColdStart] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,10 +82,12 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
   // closure without making it depend on (and restart with) `live`.
   const liveRef = useRef(live);
   const indexRef = useRef(index);
+  const playingRef = useRef(playing);
   useEffect(() => {
     liveRef.current = live;
     indexRef.current = index;
-  }, [live, index]);
+    playingRef.current = playing;
+  }, [live, index, playing]);
 
   // Load (and periodically refresh) the frame index.
   useEffect(() => {
@@ -93,7 +100,15 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
         setColdStart(false);
         setError(null);
         setFrames(prev => {
-          if (liveRef.current && next.length > 0) {
+          if (prev.length === 0 && next.length > 1 && playingRef.current) {
+            // The first list for this product and window, with playback on: start
+            // at the oldest frame so the run actually plays through to now. The
+            // branch below would otherwise pin straight to the newest frame, and
+            // since the loop stops there rather than wrapping, the animation
+            // would never run at all — the app would open on a still.
+            setIndexState(0);
+            setLive(false);
+          } else if (liveRef.current && next.length > 0) {
             // Pin to the newest frame only if the view was already there.
             setIndexState(next.length - 1);
           } else if (prev.length > 0 && next.length > 0) {
@@ -171,22 +186,27 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
       setIndexState(prev => {
         const last = frames.length - 1;
         if (prev >= last) {
-          // Hold on the newest frame, then wrap.
+          // Hold on the newest frame, then stop. The animation does not wrap:
+          // running it forever means the map spends most of its time showing the
+          // past while looking like a live view, and the wrap from "now" back to
+          // an hour ago is the moment a viewer is most likely to misread. Ending
+          // on the newest frame leaves the map showing the current weather, which
+          // is the answer they came for; play restarts the run from the beginning.
           if (dwellRef.current < END_DWELL_FRAMES) {
             dwellRef.current += 1;
             return prev;
           }
           dwellRef.current = 0;
-          setLive(false);
-          return 0;
+          setPlaying(false);
+          return prev;
         }
         const nextIndex = prev + 1;
         if (nextIndex >= last) setLive(true);
         return nextIndex;
       });
-    }, 1000 / speed);
+    }, 1000 / PLAYBACK_FPS);
     return () => window.clearInterval(timer);
-  }, [playing, speed, frames.length]);
+  }, [playing, frames.length]);
 
   const setIndex = useCallback(
     (i: number) => {
@@ -198,19 +218,21 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
     [frames.length]
   );
 
-  const step = useCallback(
-    (delta: number) => {
+  // Play from a finished run starts over rather than doing nothing: the loop
+  // stops on the newest frame, so "play" there can only sensibly mean "run it
+  // again from the start".
+  const togglePlaying = useCallback(() => {
+    if (playing) {
       setPlaying(false);
-      setIndex(index + delta);
-    },
-    [index, setIndex]
-  );
-
-  const goLive = useCallback(() => {
-    setIndex(frames.length - 1);
-  }, [frames.length, setIndex]);
-
-  const togglePlaying = useCallback(() => setPlaying(p => !p), []);
+      return;
+    }
+    if (frames.length > 1 && index >= frames.length - 1) {
+      setIndexState(0);
+      setLive(false);
+      dwellRef.current = 0;
+    }
+    setPlaying(true);
+  }, [playing, index, frames.length]);
 
   const safeIndex = Math.min(index, Math.max(frames.length - 1, 0));
 
@@ -220,7 +242,6 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
       index: safeIndex,
       current: frames[safeIndex],
       playing,
-      speed,
       loadedCount,
       ready: frames.length > 0,
       coldStart,
@@ -229,23 +250,17 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
       setIndex,
       setPlaying,
       togglePlaying,
-      setSpeed,
-      goLive,
-      step,
     }),
     [
       frames,
       safeIndex,
       playing,
-      speed,
       loadedCount,
       coldStart,
       error,
       live,
       setIndex,
       togglePlaying,
-      goLive,
-      step,
     ]
   );
 }

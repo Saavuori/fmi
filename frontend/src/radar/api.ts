@@ -158,12 +158,14 @@ export function clockTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function clockDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('fi-FI', {
+/** The day under the frame clock's time. The weekday is there because the
+ * look-back runs to a week, and "18.07." alone does not tell a viewer scrubbing
+ * through it which day they have landed on nearly as quickly. */
+export function clockDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('fi-FI', {
+    weekday: 'short',
     day: '2-digit',
     month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
   });
 }
 
