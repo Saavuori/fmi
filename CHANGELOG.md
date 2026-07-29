@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Tutka is a live weather map of Finland built on the Finnish Meteorological Institute's open data, and is a sibling of the Fintraffic live traffic map — same Go + React/MapLibre single-container architecture, same CI-owned versioning.
 
+## [v0.4.2] - 2026-07-29
+
+### Fixed
+- **Switching the theme no longer wipes the lightning strikes off the map**: going light or dark left nothing but the basemap. `setStyle()` discards every custom source, so the map waits for the new style before putting the layers back — but it treated `styledata` as that signal, and `styledata` also fires for ordinary edits to the *outgoing* style, including the overlays tearing themselves down and re-adding in the same commit as the swap. So the rebuild ran a moment too early, against the style that was about to be thrown away, and then swallowed the real `style.load` it had unregistered itself from. The radar quietly recovered whenever the next frame arrived, which is what made this look like a lightning problem: the strikes and the station markers had no such second chance and stayed gone for the rest of the visit. The map now waits for `style.load` alone.
+
 ## [v0.4.1] - 2026-07-25
 
 ### Changed

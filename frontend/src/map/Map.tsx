@@ -202,23 +202,26 @@ const Map: React.FC<MapProps> = ({
     styleReadyRef.current = false;
     m.setStyle(BASEMAP_STYLES[theme]);
 
-    // Whichever of these lands first means the new style will accept sources
-    // again. isStyleLoaded() is deliberately not consulted: it still reports
-    // false at this point even though addSource/addLayer are already accepted.
-    let installed = false;
+    // `style.load` is the one event that means *this* style is the live one.
+    // `styledata` is not, and listening for it as well used to lose the whole
+    // overlay stack on every theme switch: it fires for any style mutation,
+    // including the overlays' own teardown and re-add, which React runs in this
+    // same commit right after setStyle(). That early "ready" installed
+    // everything into the style that was about to be discarded, and — having
+    // unregistered itself — swallowed the real style.load, so the map kept
+    // nothing but the basemap. Radar happened to recover whenever the next frame
+    // arrived (the frame effect re-runs install when the source is missing); the
+    // strikes and stations had no such path and simply stayed gone.
+    //
+    // isStyleLoaded() is still deliberately not consulted: it reports false at
+    // this point even though addSource/addLayer are already accepted.
     const onReady = () => {
-      if (installed) return;
-      installed = true;
-      m.off('style.load', onReady);
-      m.off('styledata', onReady);
       styleReadyRef.current = true;
       installRef.current?.();
     };
-    m.on('style.load', onReady);
-    m.on('styledata', onReady);
+    m.once('style.load', onReady);
     return () => {
       m.off('style.load', onReady);
-      m.off('styledata', onReady);
     };
   }, [theme]);
 
