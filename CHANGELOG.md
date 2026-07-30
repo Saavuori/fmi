@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Tutka is a live weather map of Finland built on the Finnish Meteorological Institute's open data, and is a sibling of the Fintraffic live traffic map — same Go + React/MapLibre single-container architecture, same CI-owned versioning.
 
+## [v0.4.3] - 2026-07-30
+
+### Changed
+- **The ⓘ credit says the data is Nordic, not just Finnish**: the badge named Ilmatieteen laitos and the licence and stopped there, which quietly implies a national service behind a national map. It now reads *Ilmatieteen laitos, CC BY 4.0 — säädataa kaikkiin Pohjoismaihin*: the institute supplies weather data across all the Nordic countries, and that is worth one clause in the one place the map already explains where its pixels come from.
+
 ## [v0.4.2] - 2026-07-29
 
 ### Fixed

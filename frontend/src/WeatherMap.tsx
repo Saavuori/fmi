@@ -47,8 +47,12 @@ interface WeatherMapProps {
  * one credit covers the radar, the strikes and the stations. MapLibre reads it
  * when the attribution control is constructed, which is why it is a constant
  * rather than something waited for.
+ *
+ * The second half is context rather than a licence condition: the institute is a
+ * Nordic-wide provider, not a Finland-only one, which is why the ⓘ names it as
+ * such even though this map's own window stops at the radar composite.
  */
-const ATTRIBUTION = 'Ilmatieteen laitos, CC BY 4.0';
+const ATTRIBUTION = 'Ilmatieteen laitos, CC BY 4.0 — säädataa kaikkiin Pohjoismaihin';
 
 const LAYERS_KEY = 'tutka-layers';
 
