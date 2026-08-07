@@ -4,8 +4,8 @@ go 1.26
 
 require (
 	github.com/prometheus/client_golang v1.24.1
-	github.com/redis/go-redis/v9 v9.21.0
-	golang.org/x/image v0.35.0
+	github.com/redis/go-redis/v9 v9.22.0
+	golang.org/x/image v0.44.0
 	golang.org/x/sync v0.22.0
 )
 
