@@ -154,16 +154,15 @@ change both").
   your new heading *above* the current top one with today's date. If the prediction
   turns out wrong after merge, fix the heading in a follow-up rather than leaving
   it mismatched.
-- **Dependencies**: self-hosted Renovate (`renovate.json5` +
-  `.github/workflows/renovate.yml`) watches all five pinned surfaces —
-  `backend/go.mod`, `frontend/package.json`, GitHub Actions, the Dockerfile, and
-  `deploy/` compose images — as one grouped weekly PR, majors split out. It writes
-  its own changelog entry via a `postUpgradeTasks` command
-  (`scripts/changelog-entry.js`); that text is factual only, so expand it by hand
-  when a bump actually matters. Adding a new kind of pinned version means adding a
-  pattern to `SOURCES` in that script. Needs `RENOVATE_APP_ID` and
-  `RENOVATE_APP_PRIVATE_KEY` secrets — *not* `GITHUB_TOKEN`, whose PRs don't fire
-  `pull_request` workflows, so required checks would never report. See README,
+- **Dependencies**: Dependabot (`.github/dependabot.yml`) watches all five pinned
+  surfaces — `backend/go.mod`, `frontend/package.json`, GitHub Actions, the
+  Dockerfile, and `deploy/` compose images — one grouped weekly PR per surface,
+  majors split out. No secrets, no GitHub App. The changelog entry is **not**
+  written for you: run `node scripts/changelog-entry.js` on the PR branch if the
+  bump deserves one, and expand the text by hand, since it is factual only and
+  can't know why an update matters. Adding a new kind of pinned version means
+  adding a pattern to `SOURCES` in that script. This replaced a self-hosted
+  Renovate whose secrets were never set, so it never opened a PR. See README,
   "Dependency updates".
 - **MapLibre**: the map mounts once behind a ref guard; cleanup on unmount is
   load-bearing under StrictMode. `setStyle()` discards added sources — re-add them

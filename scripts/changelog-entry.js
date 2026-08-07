@@ -2,15 +2,15 @@
 //
 // Writes the CHANGELOG.md entry for an automated dependency-update branch.
 //
-// Runs as a Renovate postUpgradeTask (see renovate.json). Renovate writes the
-// manifest updates into the working tree and runs this *before* committing, so
-// the pending diff is exactly the list of what changed — which is what this reads.
+// Run it by hand on a Dependabot branch — `gh pr checkout <n> && node
+// scripts/changelog-entry.js`. It reads the diff against BASE_BRANCH (default
+// `main`), so the branch's manifest changes are exactly the list it works from.
 //
-// Deriving the entry from the diff rather than from Renovate's own template data
-// is deliberate: it keeps the script runnable and testable outside Renovate, and
-// it survives changing (or dropping) the bot that calls it. The cost is the
-// per-manifest patterns below, which have to be extended when a new kind of
-// pinned version enters the repo.
+// It used to run automatically as a Renovate postUpgradeTask. Deriving the entry
+// from the diff rather than from the bot's own template data is what let that
+// switch cost nothing here: the script never knew which bot called it. The cost
+// is the per-manifest patterns below, which have to be extended when a new kind
+// of pinned version enters the repo.
 //
 // The text it produces is factual — what moved, and between which versions.
 // Nothing here can know *why* a bump matters, which is the part this changelog is
@@ -65,8 +65,9 @@ const SOURCES = [
   },
 ];
 
-// Renovate runs this before it commits, so the updates are unstaged. Falling back
-// to the last commit covers running it by hand on an already-committed branch.
+// A Dependabot branch arrives already committed, so the HEAD~1 fallback is the
+// normal path now — Dependabot force-pushes one commit on top of the base branch.
+// The unstaged read stays first for the case where you edit a manifest by hand.
 let diff = git('diff --unified=0');
 if (!diff.trim()) diff = git('diff --unified=0 HEAD~1 HEAD');
 if (!diff.trim()) {

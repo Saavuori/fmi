@@ -34,8 +34,8 @@ frontend/
   src/layers/{salama,havainnot}/  # overlay layers: own their sources, render no DOM
   src/components/                 # panels, transport bar
   src/shared/                     # feature-agnostic hooks + components
-scripts/                          # changelog renderer + Renovate entry generator
-.github/workflows/                # PR checks, release, Pages, Renovate
+scripts/                          # changelog renderer + entry generator
+.github/workflows/                # PR checks, release, Pages
 deploy/                           # compose + installer + cron updater
 Dockerfile                        # vite build -> go build w/ embed -> alpine
 ```
@@ -230,26 +230,32 @@ new image and redeploys when the digest changes.
 
 ## Dependency updates
 
-A self-hosted Renovate runs weekly (Mondays 04:00 UTC) and opens **one grouped PR**
-across all five pinned surfaces — `backend/go.mod`, `frontend/package.json`, GitHub
-Actions, the `Dockerfile`, and the `deploy/` compose images. Majors are split out so
-each gets a real review. It writes its own changelog entry via a
-`postUpgradeTasks` command.
+Dependabot (`.github/dependabot.yml`) runs weekly on Mondays and watches all five
+pinned surfaces — `backend/go.mod`, `frontend/package.json`, GitHub Actions, the
+`Dockerfile`, and the `deploy/` compose images. Each surface groups its own
+minor+patch updates into one PR and splits majors out, so a normal week is up to
+five small PRs and anything that needs a real review arrives on its own.
 
-### Required setup
+Nothing to set up: Dependabot needs no secrets and no GitHub App.
 
-Two repository secrets: **`RENOVATE_APP_ID`** and **`RENOVATE_APP_PRIVATE_KEY`**,
-from a GitHub App installed on this repo with `contents: write`,
-`pull-requests: write` and `workflows: write`.
+### Changelog entries
 
-It must **not** be `GITHUB_TOKEN`: PRs opened by the built-in token do not fire
-`pull_request` workflows, so the required checks would never report and the PR could
-never merge.
+`scripts/changelog-entry.js` derives an entry from the pending diff, so it still
+works — it just isn't run for you any more. On a Dependabot branch:
 
-Renovate is self-hosted rather than using the Mend app because `postUpgradeTasks`
-runs arbitrary commands, which the hosted app does not allow —
-`RENOVATE_ALLOWED_COMMANDS` in the workflow is the actual security boundary, and it
-is an anchored regex matching exactly one script.
+```bash
+gh pr checkout <number>
+node scripts/changelog-entry.js
+```
 
-Run it by hand from the Actions tab (`workflow_dispatch`), optionally with
-`dryRun` to see what it would do.
+Skipping it is fine for a plain bump: CLAUDE.md exempts chores from the changelog
+rule, and `pr-checks.yml` only rejects an `[Unreleased]` placeholder, not a missing
+entry. Write one by hand when a bump actually changes behaviour.
+
+### Why not Renovate
+
+This repo used to carry a self-hosted Renovate, chosen so `postUpgradeTasks` could
+write the changelog entry inside Renovate's own commit. It never opened a PR: the
+workflow required `RENOVATE_APP_ID` and `RENOVATE_APP_PRIVATE_KEY`, those secrets
+were never set here, and every scheduled run failed at the guard step. A
+zero-setup bot that runs beats a better-integrated one that doesn't.

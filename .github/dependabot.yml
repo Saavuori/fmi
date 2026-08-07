@@ -1,0 +1,117 @@
+version: 2
+
+# Replaces the self-hosted Renovate that used to live in renovate.json5 +
+# .github/workflows/renovate.yml. That setup never opened a single PR: the
+# workflow needs RENOVATE_APP_ID / RENOVATE_APP_PRIVATE_KEY, those secrets were
+# never set on this repo, and every scheduled run since 2026-07-27 failed at the
+# guard step. Dependabot needs no secrets and no GitHub App, which is the whole
+# reason for the move.
+#
+# What is lost: Renovate's postUpgradeTasks ran scripts/changelog-entry.js inside
+# its own commit, so dependency PRs arrived with the CHANGELOG.md entry already
+# written. Dependabot cannot run commands. The script still works — it reads the
+# pending diff, not Renovate's template data — so on a Dependabot branch it is a
+# manual step:
+#
+#   git fetch origin dependabot/go_modules/backend/... && git switch --detach FETCH_HEAD
+#   node scripts/changelog-entry.js
+#
+# Skipping it is also fine: CLAUDE.md exempts chores from the changelog rule, and
+# pr-checks.yml only rejects an [Unreleased] placeholder, not a missing entry.
+#
+# Five pinned surfaces, same as Renovate watched. Dependabot groups per ecosystem
+# rather than across all of them, so expect up to five PRs a week instead of one.
+updates:
+  # ---- Go backend ----
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Helsinki
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies, go]
+    # Don't propose a release until it has survived three days in the wild, so a
+    # version that gets yanked shortly after publishing never reaches a PR.
+    cooldown:
+      default-days: 3
+    groups:
+      go-minor-patch:
+        update-types: [minor, patch]
+
+  # ---- Vite frontend ----
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Helsinki
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    labels: [dependencies, frontend]
+    cooldown:
+      default-days: 3
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  # ---- Dockerfile base images ----
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Helsinki
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies, docker]
+    cooldown:
+      default-days: 3
+    groups:
+      docker-minor-patch:
+        update-types: [minor, patch]
+
+  # ---- deploy/ compose service images ----
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Helsinki
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies, docker]
+    cooldown:
+      default-days: 3
+    ignore:
+      # Our own image is pinned to :latest by design — deploy/update.sh is what
+      # pulls it, and a PR bumping a tag that never changes is pure noise.
+      - dependency-name: ghcr.io/saavuori/*
+    groups:
+      compose-minor-patch:
+        update-types: [minor, patch]
+
+  # ---- GitHub Actions ----
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Helsinki
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies, ci]
+    cooldown:
+      default-days: 3
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
