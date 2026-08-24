@@ -11,7 +11,7 @@ RUN npm run build
 # leg of the multi-arch build runs the Go toolchain under QEMU emulation, which
 # is where nearly all of the build time went. CGO_ENABLED=0 (load-bearing for
 # the pure-Go SQLite driver) means cross-compiling costs nothing.
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS backend-builder
 WORKDIR /app
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
