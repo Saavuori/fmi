@@ -4,7 +4,7 @@ package havainnot
 // unit together means the frontend can render a parameter picker and a legend
 // without duplicating FMI's vocabulary.
 //
-// The frontend mirrors this in src/modes/havainnot/lib/observations.ts — change
+// The frontend mirrors this in src/layers/havainnot/observations.ts — change
 // one, change both.
 type Parameter struct {
 	Code  string `json:"code"` // FMI's parameter name, e.g. "t2m"

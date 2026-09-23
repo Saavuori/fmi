@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -97,7 +98,7 @@ func (h *Handlers) ProductList(w http.ResponseWriter, r *http.Request) {
 				info.Palettes = append(info.Palettes, id)
 			}
 		}
-		sortStrings(info.Palettes)
+		slices.Sort(info.Palettes)
 		if latest, ok := h.store.Latest(p.ID); ok {
 			info.Latest = latest.Format(time.RFC3339)
 		}
@@ -401,14 +402,4 @@ func parseTimeParam(v string) (time.Time, error) {
 func roundTo(v float64, places int) float64 {
 	scale := math.Pow(10, float64(places))
 	return math.Round(v*scale) / scale
-}
-
-// sortStrings is an insertion sort for the short palette-id lists, keeping the
-// import list to the standard few.
-func sortStrings(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j] < s[j-1]; j-- {
-			s[j], s[j-1] = s[j-1], s[j]
-		}
-	}
 }
