@@ -8,10 +8,10 @@ interface LocateControlProps {
 }
 
 /**
- * Bottom-right "Locate me" button shared by every mode. Centers the map on the
- * browser's geolocation, drops a "you are here" marker, and surfaces a
- * transient error toast when the location can't be resolved. Extracted from the
- * radar map so every mode shares one control.
+ * Bottom-right "locate me" button. Centers the map on the browser's
+ * geolocation, drops a "you are here" marker, and surfaces a transient error
+ * toast when the location can't be resolved. The labels are Finnish like the
+ * rest of the UI; they came over in English from the sibling app.
  */
 export const LocateControl: React.FC<LocateControlProps> = ({ getMap }) => {
   const userLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -37,7 +37,7 @@ export const LocateControl: React.FC<LocateControlProps> = ({ getMap }) => {
     const m = getMap();
     if (!m) return;
     if (!navigator.geolocation) {
-      showGeoError('Geolocation is not supported by this browser.');
+      showGeoError('Selain ei tue paikannusta.');
       return;
     }
 
@@ -62,10 +62,10 @@ export const LocateControl: React.FC<LocateControlProps> = ({ getMap }) => {
         setLocating(false);
         const message =
           error.code === error.PERMISSION_DENIED
-            ? 'Location permission denied.'
+            ? 'Paikannuslupa evättiin.'
             : error.code === error.POSITION_UNAVAILABLE
-              ? 'Location unavailable.'
-              : 'Location request timed out.';
+              ? 'Sijaintia ei saatu.'
+              : 'Paikannus aikakatkaistiin.';
         showGeoError(message);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -78,8 +78,8 @@ export const LocateControl: React.FC<LocateControlProps> = ({ getMap }) => {
         className="locate-control"
         onClick={locateUser}
         disabled={locating}
-        aria-label="Locate me"
-        title="Locate me"
+        aria-label="Paikanna minut"
+        title="Paikanna minut"
       >
         <LocateFixed size={18} className={locating ? 'locate-spin' : undefined} />
       </button>

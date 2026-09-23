@@ -104,11 +104,6 @@
     min-height: 44px;
   }
 
-  /* The webcam detail is a fixed-width card on desktop; edge-to-edge here. */
-  .mobile-panel.webcam-popup {
-    width: auto;
-  }
-
   /* --- launcher ---
      The collapsed state of a filter panel. Top-right, clear of the status
      banner's centred pill and of everything docked at the bottom. */

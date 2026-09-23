@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"image"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"golang.org/x/image/tiff"
 
+	"fmi/internal/core/fmiwfs"
 	"fmi/internal/core/upstream"
 )
 
@@ -56,18 +58,6 @@ type wfsFeatureCollection struct {
 	} `xml:"member"`
 }
 
-// wfsException is FMI's error envelope. It comes back with HTTP 200 in some
-// cases, so a successful fetch is not the same as a successful query.
-//
-// There is deliberately no field for the exceptionCode attribute: `a>b,attr` is
-// not a legal encoding/xml tag, and including one makes Unmarshal fail for the
-// whole struct — which previously swallowed the upstream message and reported a
-// confusing "expected <FeatureCollection>" error instead.
-type wfsException struct {
-	XMLName xml.Name `xml:"ExceptionReport"`
-	Text    string   `xml:"Exception>ExceptionText"`
-}
-
 // frameMeta is what discovery yields for one available frame.
 type frameMeta struct {
 	Time   time.Time
@@ -79,19 +69,10 @@ type frameMeta struct {
 // from a WFS GridSeriesObservation response. Results are in ascending time order
 // and de-duplicated, because FMI occasionally repeats a timestamp across members.
 func parseWFSFrames(body []byte, def Product) ([]frameMeta, error) {
-	// An exception body is never a frame list, so report it as an error whether or
-	// not the text can be extracted — falling through to the generic parse would
-	// only turn a clear upstream message into a confusing schema complaint.
-	if bytes.Contains(body, []byte("ExceptionReport")) {
-		var exc wfsException
-		text := ""
-		if err := xml.Unmarshal(body, &exc); err == nil {
-			text = strings.TrimSpace(exc.Text)
-		}
-		if text == "" {
-			text = "unspecified WFS exception"
-		}
-		return nil, fmt.Errorf("fmi wfs exception: %s", text)
+	// Checked first: falling through to the generic parse would only turn a clear
+	// upstream message into a confusing schema complaint.
+	if err := fmiwfs.CheckException(body); err != nil {
+		return nil, err
 	}
 
 	var fc wfsFeatureCollection
@@ -135,18 +116,8 @@ func parseWFSFrames(body []byte, def Product) ([]frameMeta, error) {
 		out = append(out, meta)
 	}
 
-	sortFrameMetas(out)
+	slices.SortFunc(out, func(a, b frameMeta) int { return a.Time.Compare(b.Time) })
 	return out, nil
-}
-
-// sortFrameMetas orders frames oldest-first with an insertion sort: the slices
-// are a handful to a few hundred entries and usually already sorted.
-func sortFrameMetas(fs []frameMeta) {
-	for i := 1; i < len(fs); i++ {
-		for j := i; j > 0 && fs[j].Time.Before(fs[j-1].Time); j-- {
-			fs[j], fs[j-1] = fs[j-1], fs[j]
-		}
-	}
 }
 
 // discoverFrames asks FMI which frames of a product exist in [from, to].
