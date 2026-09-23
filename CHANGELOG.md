@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. Tutka is a live weather map of Finland built on the Finnish Meteorological Institute's open data, and is a sibling of the Fintraffic live traffic map — same Go + React/MapLibre single-container architecture, same CI-owned versioning.
 
+## [v0.4.9] - 2026-09-23
+
+### Fixed
+- **The radar works without a frame archive**: with `FRAMES_DIR` empty, or a `/data` volume the container cannot write, the radar is meant to fall back to serving what it holds in memory. Instead it showed nothing at all. Frames were fetched but never indexed, so the timeline stayed on "Ladataan tutkakuvia…" forever. Every poll also downloaded the whole look-back window from FMI again, about 16 raster requests a minute, which is more than FMI's 20 000 download requests a day. Frames held in memory are now listed and served, and each frame is still downloaded only once.
+- **A failed request during the boot backfill no longer leaves a day missing from the history**: when FMI's frame listing failed for one day-long slice, the backfill skipped to the day before, and the hole stayed in the timeline until the next restart. The slice is now retried a few times before it is given up on.
+- **The rain-arrival estimate no longer overstates the speed when a frame is unreadable**: the motion is measured between the last two frames that could be read, but it was timed as if they were the last two listed. With one frame missing, a ten-minute move was divided by five minutes, doubling the speed and bringing "sade saapuu" forward. The real gap is used now, and a ten-minute gap is too long to extrapolate from, so the estimate is withheld. A point just past the western or northern edge of the radar grid also no longer reads its "upwind" rain from inside the grid.
+- **Old lightning leaves the map during an FMI outage**: strikes older than two hours were only dropped when a new poll succeeded. While FMI was failing, the last storm stayed on the map and in the panel's counts, presented as "the last two hours", for as long as the outage lasted. The window is now applied on every read.
+- **The timeline's loading note no longer comes back every minute**: the frame list refreshes every minute, and each refresh restarted the image preload from the first frame. The note reappeared, and the whole window was fetched again, up to about 2000 frames for the week view. Only frames not already loaded are fetched now.
+- **Tapping a station and then the map no longer brings the station back**: a station's details arriving after the viewer had moved on, to another station or to a point on the map, reopened the station panel over the readout that replaced it. Only the latest selection's response is shown.
+- **Place search without Redis no longer keeps every query in memory**: the in-memory fallback cache never deleted expired entries. That was harmless for the handful of fixed keys the weather layers use. Place search, though, caches every distinct query, so its keys accumulated for the life of the process. Expired entries are now swept.
+
+### Changed
+- **The locate button speaks Finnish**: its label and its error messages were the last English left in the interface.
+- **Housekeeping**: about 570 lines of CSS for things this app never draws (vessel cards, port calls, train cards, webcams, trail controls), inherited from the Fintraffic sibling, are gone. There is one WFS error parser instead of two copies that had drifted apart, a header timeout on the HTTP server, and a few helpers that duplicated the standard library have been removed.
+
 ## [v0.4.3] - 2026-08-07
 
 ### Changed
