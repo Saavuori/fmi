@@ -1,8 +1,5 @@
 // Mirrors internal/salama/models.go — change one, change both.
 
-// The basemap and theme identity live with the map now that there is only one of
-// it; this module keeps only what is specific to lightning.
-export type { Theme } from '../../map/theme';
 import type { Theme } from '../../map/theme';
 
 export interface Strike {
