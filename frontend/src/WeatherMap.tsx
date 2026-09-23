@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import Map from './map/Map';
 import {
@@ -111,6 +111,10 @@ function WeatherMap({ theme, onToggleTheme }: WeatherMapProps) {
   const [point, setPoint] = useState<PointResponse | null>(null);
   const [pointError, setPointError] = useState<string | null>(null);
   const [station, setStation] = useState<StationDetail | null>(null);
+  // Bumped by every selection, so a station response that arrives after the
+  // viewer has moved on (to another station, or to a point on the map) is
+  // dropped instead of reopening the panel over what they picked since.
+  const stationRequest = useRef(0);
 
   const [isFilterCollapsed, setIsFilterCollapsed] = useState<boolean>(
     typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false
@@ -203,6 +207,7 @@ function WeatherMap({ theme, onToggleTheme }: WeatherMapProps) {
   // loading rather than briefly showing the old location's numbers) and avoids a
   // synchronous state update inside an effect.
   const pickPoint = useCallback((next: { lat: number; lon: number }) => {
+    stationRequest.current += 1;
     setStation(null);
     setProbe(next);
     setPoint(null);
@@ -222,13 +227,15 @@ function WeatherMap({ theme, onToggleTheme }: WeatherMapProps) {
   // One detail panel at a time: on desktop both would land on the same right
   // rail, and on a phone both are the whole screen.
   const selectStation = useCallback(async (fmisid: string) => {
+    const request = ++stationRequest.current;
     closePoint();
     setIsDetailCollapsed(false);
     if (window.matchMedia(MOBILE_QUERY).matches) setIsFilterCollapsed(true);
     try {
-      const res = await fetch(`/api/havainnot/station/${fmisid}`);
+      const res = await fetch(`/api/havainnot/station/${encodeURIComponent(fmisid)}`);
       if (!res.ok) return;
-      setStation((await res.json()) as StationDetail);
+      const detail = (await res.json()) as StationDetail;
+      if (request === stationRequest.current) setStation(detail);
     } catch {
       // A failed detail fetch leaves the previous selection alone rather than
       // clearing the panel out from under the viewer.
@@ -329,7 +336,10 @@ function WeatherMap({ theme, onToggleTheme }: WeatherMapProps) {
           station={station}
           parameters={parameters}
           param={parameters.find(p => p.code === paramCode)}
-          onClose={() => setStation(null)}
+          onClose={() => {
+            stationRequest.current += 1;
+            setStation(null);
+          }}
           isCollapsed={isDetailCollapsed}
           onToggleCollapse={() => setIsDetailCollapsed(v => !v)}
           isMobile={isMobile}
