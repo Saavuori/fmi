@@ -13,6 +13,10 @@ type lru[K comparable, V any] struct {
 	max   int
 	ll    *list.List // front is most recently used
 	items map[K]*list.Element
+
+	// onEvict, when set, is told about every entry dropped for capacity. It runs
+	// after the lock is released, so it may take other locks.
+	onEvict func(K, V)
 }
 
 type lruEntry[K comparable, V any] struct {
@@ -44,20 +48,31 @@ func (c *lru[K, V]) get(key K) (V, bool) {
 
 func (c *lru[K, V]) put(key K, value V) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	if el, ok := c.items[key]; ok {
 		el.Value.(*lruEntry[K, V]).value = value
 		c.ll.MoveToFront(el)
+		c.mu.Unlock()
 		return
 	}
 	c.items[key] = c.ll.PushFront(&lruEntry[K, V]{key: key, value: value})
+	var evicted []*lruEntry[K, V]
 	for c.ll.Len() > c.max {
 		oldest := c.ll.Back()
 		if oldest == nil {
-			return
+			break
 		}
 		c.ll.Remove(oldest)
-		delete(c.items, oldest.Value.(*lruEntry[K, V]).key)
+		entry := oldest.Value.(*lruEntry[K, V])
+		delete(c.items, entry.key)
+		evicted = append(evicted, entry)
+	}
+	onEvict := c.onEvict
+	c.mu.Unlock()
+
+	if onEvict != nil {
+		for _, e := range evicted {
+			onEvict(e.key, e.value)
+		}
 	}
 }
 
