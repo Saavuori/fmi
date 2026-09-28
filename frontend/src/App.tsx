@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import WeatherMap from './WeatherMap';
 import { VersionBadge } from './shared/components/VersionBadge';
-
-export type Theme = 'dark' | 'light';
+import type { Theme } from './map/theme';
 
 /**
  * The shell. It owns the theme and nothing else.

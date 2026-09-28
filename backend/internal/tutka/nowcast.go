@@ -209,8 +209,10 @@ func ExtrapolatePoint(latest *Frame, motion Motion, lon, lat float64) []Extrapol
 		dt := float64(minutes) * 60
 		// The rain that will be over the point in `dt` is the rain that is
 		// currently upwind of it, so step backwards along the motion vector.
-		sx := int(px - motion.PxPerSec*dt)
-		sy := int(py - motion.PyPerSec*dt)
+		// Floor, not int(): truncation rounds -0.4 up to column 0 and would
+		// read rain from inside the grid for a point just beyond its edge.
+		sx := int(math.Floor(px - motion.PxPerSec*dt))
+		sy := int(math.Floor(py - motion.PyPerSec*dt))
 
 		value, state := latest.ValueAtPixel(sx, sy)
 		step := Extrapolation{MinutesAhead: minutes, State: state}

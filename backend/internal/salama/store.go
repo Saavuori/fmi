@@ -90,10 +90,17 @@ func (s *Store) Merge(ctx context.Context, fresh []Strike, window time.Duration,
 // Get returns the retained strikes. The bool is load-bearing: false means no poll
 // has succeeded yet, which handlers turn into a 503 so the frontend shows a
 // loading state rather than an empty map that looks like calm weather.
+//
+// The window is applied again here, not only in Merge: if the poller stops
+// succeeding nothing merges, and the retained set would otherwise keep being
+// served as "the last two hours" for as long as the outage lasts.
 func (s *Store) Get(ctx context.Context, window time.Duration) (StrikeSummary, bool) {
+	cutoff := time.Now().Add(-window).Unix()
+
 	if body, err := s.cache.GetValue(ctx, strikesKey); err == nil && body != nil {
 		var summary StrikeSummary
 		if err := json.Unmarshal(body, &summary); err == nil {
+			summary.Strikes = since(summary.Strikes, cutoff)
 			return summary, true
 		}
 	}
@@ -104,17 +111,18 @@ func (s *Store) Get(ctx context.Context, window time.Duration) (StrikeSummary, b
 		return StrikeSummary{}, false
 	}
 	return StrikeSummary{
-		Strikes:       s.fallback,
+		Strikes:       since(s.fallback, cutoff),
 		WindowMinutes: int(window / time.Minute),
 		Updated:       s.updated,
 	}, true
 }
 
-// Count returns the retained strike count, for the health report.
-func (s *Store) Count() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.fallback)
+// since returns the strikes at or after cutoff (unix seconds). The input is
+// sorted oldest first, so this is a prefix cut, and it never writes to the
+// shared slice.
+func since(strikes []Strike, cutoff int64) []Strike {
+	i := sort.Search(len(strikes), func(i int) bool { return strikes[i].Timestamp >= cutoff })
+	return strikes[i:]
 }
 
 // strikeKey identifies a strike for de-duplication. Coordinates are quantised to

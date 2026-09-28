@@ -11,12 +11,20 @@ type memoryValue struct {
 	expiresAt time.Time
 }
 
+// sweepInterval is how often a write also clears out expired entries.
+const sweepInterval = time.Minute
+
 // MemoryCache is the fallback used when Redis is disabled or unreachable.
-// Expired entries are not swept in the background — GetValue simply refuses to
-// return them — which is fine because the key set is small and bounded.
+//
+// GetValue refuses expired entries, but that alone does not free them, and the
+// key set is not bounded: place search writes one key per distinct query a
+// visitor types. So writes sweep expired entries too, at most once per
+// sweepInterval, which bounds the map by what is still live — Redis does the
+// same job with its own expiry.
 type MemoryCache struct {
-	mu     sync.RWMutex
-	values map[string]memoryValue
+	mu        sync.RWMutex
+	values    map[string]memoryValue
+	lastSweep time.Time
 }
 
 func NewMemoryCache() *MemoryCache {
@@ -26,7 +34,16 @@ func NewMemoryCache() *MemoryCache {
 func (m *MemoryCache) SetValue(ctx context.Context, key string, payload []byte, ttl time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.values[key] = memoryValue{payload: payload, expiresAt: time.Now().Add(ttl)}
+	now := time.Now()
+	if now.Sub(m.lastSweep) >= sweepInterval {
+		for k, v := range m.values {
+			if now.After(v.expiresAt) {
+				delete(m.values, k)
+			}
+		}
+		m.lastSweep = now
+	}
+	m.values[key] = memoryValue{payload: payload, expiresAt: now.Add(ttl)}
 	return nil
 }
 

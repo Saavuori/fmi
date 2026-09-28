@@ -2,7 +2,7 @@ package salama
 
 // Strike is one lightning discharge.
 //
-// The frontend mirrors this in src/modes/salama/lib/strikes.ts — change one,
+// The frontend mirrors this in src/layers/salama/strikes.ts — change one,
 // change both.
 type Strike struct {
 	Latitude  float64 `json:"latitude"`

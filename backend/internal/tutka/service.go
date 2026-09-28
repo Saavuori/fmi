@@ -34,6 +34,11 @@ const (
 
 	// Backfill asks in day-long slices so a single WFS response stays small.
 	backfillChunk = 24 * time.Hour
+
+	// How many times the backfill asks for one slice before giving up on it, so
+	// a transient error does not leave a day-long hole and a persistent one does
+	// not stall everything older.
+	backfillAttempts = 3
 )
 
 // Service is the tutka (radar) mode: it downloads FMI's radar composites, keeps
@@ -59,6 +64,11 @@ type Service struct {
 	lastErr     map[string]*atomic.Pointer[string]
 	backfilling atomic.Bool
 	backfilled  atomic.Int64
+
+	// discover and retryWait are fields rather than direct calls so tests can
+	// run the loops without FMI and without waiting out the real interval.
+	discover  func(ctx context.Context, p Product, from, to time.Time) ([]frameMeta, error)
+	retryWait time.Duration
 }
 
 // NewService wires the mode. Retention comes from config, falling back to the
@@ -79,13 +89,17 @@ func NewService(cfg *config.Config, liveCache cache.Cache) *Service {
 	store := NewStore(cfg.FramesDir, grid, liveCache)
 
 	s := &Service{
-		client:   upstream.NewClient(wmsBase),
-		store:    store,
-		handlers: NewHandlers(store, grid, products),
-		grid:     grid,
-		products: products,
-		lastPoll: make(map[string]*atomic.Int64, len(products)),
-		lastErr:  make(map[string]*atomic.Pointer[string], len(products)),
+		client:    upstream.NewClient(wmsBase),
+		store:     store,
+		handlers:  NewHandlers(store, grid, products),
+		grid:      grid,
+		products:  products,
+		lastPoll:  make(map[string]*atomic.Int64, len(products)),
+		lastErr:   make(map[string]*atomic.Pointer[string], len(products)),
+		retryWait: retryInterval,
+	}
+	s.discover = func(ctx context.Context, p Product, from, to time.Time) ([]frameMeta, error) {
+		return discoverFrames(ctx, s.client, p, from, to)
 	}
 	for _, p := range products {
 		s.lastPoll[p.ID] = new(atomic.Int64)
@@ -163,7 +177,7 @@ func (s *Service) pollProduct(ctx context.Context, p Product) {
 			log.Printf("Tutka: error syncing %s: %v", p.ID, err)
 			msg := err.Error()
 			s.lastErr[p.ID].Store(&msg)
-			if !sleepCtx(ctx, retryInterval) {
+			if !sleepCtx(ctx, s.retryWait) {
 				return
 			}
 			continue
@@ -184,7 +198,7 @@ func (s *Service) pollProduct(ctx context.Context, p Product) {
 // sync discovers the frames of a product in a window and fetches the ones not
 // already archived. It returns how many were added.
 func (s *Service) sync(ctx context.Context, p Product, from, to time.Time) (int, error) {
-	metas, err := discoverFrames(ctx, s.client, p, from, to)
+	metas, err := s.discover(ctx, p, from, to)
 	if err != nil {
 		return 0, err
 	}
@@ -259,7 +273,8 @@ func (s *Service) backfillProduct(ctx context.Context, p Product) {
 	}
 	deadline := time.Now().Add(-horizon)
 
-	for to := time.Now(); to.After(deadline); to = to.Add(-backfillChunk) {
+	attempt := 0
+	for to := time.Now(); to.After(deadline); {
 		if ctx.Err() != nil {
 			return
 		}
@@ -268,17 +283,25 @@ func (s *Service) backfillProduct(ctx context.Context, p Product) {
 			from = deadline
 		}
 
-		metas, err := discoverFrames(ctx, s.client, p, from, to)
+		metas, err := s.discover(ctx, p, from, to)
 		if err != nil {
 			if ctx.Err() != nil {
 				return
 			}
-			log.Printf("Tutka: backfill discovery for %s failed: %v", p.ID, err)
-			if !sleepCtx(ctx, retryInterval) {
+			attempt++
+			log.Printf("Tutka: backfill discovery for %s failed (attempt %d/%d): %v", p.ID, attempt, backfillAttempts, err)
+			if !sleepCtx(ctx, s.retryWait) {
 				return
 			}
-			continue
+			// Ask for the same slice again rather than stepping past it, which
+			// would leave a day-long hole behind a single transient error.
+			if attempt < backfillAttempts {
+				continue
+			}
+			log.Printf("Tutka: backfill giving up on %s %s..%s", p.ID, from.Format(time.RFC3339), to.Format(time.RFC3339))
 		}
+		attempt = 0
+		to = from
 
 		for _, meta := range backfillOrder(metas) {
 			if s.store.Has(p.ID, meta.Time) {

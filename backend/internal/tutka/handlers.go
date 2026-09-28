@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -97,7 +98,7 @@ func (h *Handlers) ProductList(w http.ResponseWriter, r *http.Request) {
 				info.Palettes = append(info.Palettes, id)
 			}
 		}
-		sortStrings(info.Palettes)
+		slices.Sort(info.Palettes)
 		if latest, ok := h.store.Latest(p.ID); ok {
 			info.Latest = latest.Format(time.RFC3339)
 		}
@@ -293,15 +294,18 @@ func (h *Handlers) Point(w http.ResponseWriter, r *http.Request) {
 	res := pointResponse{Lat: lat, Lon: lon, Product: p.ID, Unit: p.Unit}
 
 	// Keep the last two frames aside for the motion estimate rather than
-	// re-reading them: they are the most expensive thing on this path.
+	// re-reading them: they are the most expensive thing on this path. Their
+	// times are kept with them, because a frame that fails to load means the
+	// two kept are not the last two listed.
 	var previous, latest *Frame
-	var latestTime time.Time
+	var previousTime, latestTime time.Time
 	for _, t := range times {
 		frame, err := h.store.Get(p.ID, t)
 		if err != nil {
 			continue
 		}
-		previous, latest, latestTime = latest, frame, t
+		previous, previousTime = latest, latestTime
+		latest, latestTime = frame, t
 
 		v, state := frame.ValueAt(lon, lat)
 		sample := pointSample{Time: t.Format(time.RFC3339), State: state}
@@ -317,7 +321,7 @@ func (h *Handlers) Point(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res.Current = res.Series[len(res.Series)-1]
-	res.Nowcast = h.nowcast(p, previous, latest, latestTime, times, lon, lat)
+	res.Nowcast = h.nowcast(p, previous, latest, previousTime, latestTime, lon, lat)
 
 	writeJSON(w, res)
 }
@@ -332,15 +336,14 @@ func (h *Handlers) Point(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) nowcast(
 	p Product,
 	previous, latest *Frame,
-	latestTime time.Time,
-	times []time.Time,
+	previousTime, latestTime time.Time,
 	lon, lat float64,
 ) *nowcastResponse {
-	if p.ID != "dbz" || previous == nil || latest == nil || len(times) < 2 {
+	if p.ID != "dbz" || previous == nil || latest == nil {
 		return nil
 	}
 
-	dt := latestTime.Sub(times[len(times)-2]).Seconds()
+	dt := latestTime.Sub(previousTime).Seconds()
 	// A gap far from the nominal cadence means a missing frame sat between these
 	// two, and treating it as one step would halve or third the speed.
 	nominal := float64(p.StepMinutes) * 60
@@ -399,14 +402,4 @@ func parseTimeParam(v string) (time.Time, error) {
 func roundTo(v float64, places int) float64 {
 	scale := math.Pow(10, float64(places))
 	return math.Round(v*scale) / scale
-}
-
-// sortStrings is an insertion sort for the short palette-id lists, keeping the
-// import list to the standard few.
-func sortStrings(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j] < s[j-1]; j-- {
-			s[j], s[j-1] = s[j-1], s[j]
-		}
-	}
 }
