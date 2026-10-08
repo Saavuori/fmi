@@ -227,3 +227,20 @@ func TestArrivalMinutesIgnoresUnmeasuredCells(t *testing.T) {
 }
 
 func ptr(v float64) *float64 { return &v }
+
+// Walking upwind off the western or northern edge lands on a negative fractional
+// pixel. Truncating -0.4 towards zero read column 0 instead, reporting rain the
+// grid does not contain; flooring it reports "outside the grid" as it should.
+func TestExtrapolatePointOffTheEdgeIsOutsideTheGrid(t *testing.T) {
+	g := motionTestGrid()
+	f := blobFrame(g, 0, 200, 40) // rain right up to the western edge
+
+	lon, lat := g.PixelCentre(0, 200) // pixel x = 0.5
+	// 0.9 px per five minutes eastward: the first step looks 0.9 px west, at -0.4.
+	motion := Motion{PxPerSec: 0.9 / 300, Valid: true}
+
+	steps := ExtrapolatePoint(f, motion, lon, lat)
+	if got := steps[0].State; got != StateOutsideGrid {
+		t.Errorf("first step state = %q, want %q", got, StateOutsideGrid)
+	}
+}

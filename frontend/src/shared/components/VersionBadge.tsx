@@ -31,7 +31,7 @@ export const VersionBadge: React.FC = () => {
       href="https://saavuori.github.io/fmi/"
       target="_blank"
       rel="noopener noreferrer"
-      title="View changelog"
+      title="Muutosloki"
     >
       <span className="version-badge__tag">{info.version}</span>
       <span className="version-badge__sep">·</span>

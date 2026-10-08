@@ -80,6 +80,10 @@ func main() {
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,
+		// A client that never finishes its headers must not hold a connection
+		// open indefinitely. No write timeout: a cold frame render is allowed
+		// to take its time.
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// 7. Handle OS shutdown signals for graceful termination
