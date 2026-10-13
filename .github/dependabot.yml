@@ -21,6 +21,8 @@ version: 2
 #
 # Five pinned surfaces, same as Renovate watched. Dependabot groups per ecosystem
 # rather than across all of them, so expect up to five PRs a week instead of one.
+# Majors are ignored on every entry: they are upgraded by hand rather than
+# proposed as PRs that sit open waiting for a review.
 updates:
   # ---- Go backend ----
   - package-ecosystem: gomod
@@ -38,6 +40,9 @@ updates:
     # version that gets yanked shortly after publishing never reaches a PR.
     cooldown:
       default-days: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
     groups:
       go-minor-patch:
         update-types: [minor, patch]
@@ -57,6 +62,9 @@ updates:
     labels: [dependencies, frontend]
     cooldown:
       default-days: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
@@ -74,6 +82,9 @@ updates:
     labels: [dependencies, docker]
     cooldown:
       default-days: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
     groups:
       docker-minor-patch:
         update-types: [minor, patch]
@@ -92,6 +103,8 @@ updates:
     cooldown:
       default-days: 3
     ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
       # Our own image is pinned to :latest by design — deploy/update.sh is what
       # pulls it, and a PR bumping a tag that never changes is pure noise.
       - dependency-name: ghcr.io/saavuori/*
@@ -112,6 +125,9 @@ updates:
     labels: [dependencies, ci]
     cooldown:
       default-days: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
     groups:
       actions-minor-patch:
         update-types: [minor, patch]
