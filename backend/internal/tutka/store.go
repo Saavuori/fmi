@@ -66,6 +66,11 @@ type Store struct {
 	mu    sync.RWMutex
 	index map[string]map[int64]bool // product -> unix seconds -> present
 	meta  map[string]productMeta
+	// fetched is used only with the archive disabled, where index can list no
+	// more than the decoded cache holds. It remembers every frame already
+	// downloaded, so a frame that fell out of memory is not fetched from FMI
+	// again on the next poll. Prune trims it to the retention window.
+	fetched map[string]map[int64]bool
 
 	decoded  *lru[string, *Frame]
 	rendered *lru[string, []byte]
@@ -83,16 +88,24 @@ func NewStore(dir string, grid Grid, c cache.Cache) *Store {
 		cache:    c,
 		index:    make(map[string]map[int64]bool),
 		meta:     make(map[string]productMeta),
+		fetched:  make(map[string]map[int64]bool),
 		decoded:  newLRU[string, *Frame](decodedCacheSize),
 		rendered: newLRU[string, []byte](renderedCacheSize),
 	}
 	if dir == "" {
 		log.Println("Tutka: FRAMES_DIR is empty, archive disabled (frames held in memory only)")
-		return s
-	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	} else if err := os.MkdirAll(dir, 0o755); err != nil {
 		log.Printf("Tutka: cannot create %s (%v), archive disabled", dir, err)
 		s.dir = ""
+	}
+	if s.dir == "" {
+		// Without an archive the decoded cache is the only copy, so a frame it
+		// evicts can no longer be served and must leave the index with it.
+		s.decoded.onEvict = func(_ string, f *Frame) {
+			s.mu.Lock()
+			delete(s.index[f.Product], f.Time.UTC().Unix())
+			s.mu.Unlock()
+		}
 	}
 	return s
 }
@@ -234,7 +247,8 @@ func (s *Store) writeMeta(product string, m productMeta) error {
 func (s *Store) Has(product string, ts time.Time) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.index[product][ts.UTC().Unix()]
+	unix := ts.UTC().Unix()
+	return s.index[product][unix] || s.fetched[product][unix]
 }
 
 // Times returns the archived timestamps of a product in ascending order,
@@ -290,11 +304,19 @@ func (s *Store) Count(product string) int {
 // and a rename so a crash mid-write cannot leave a truncated PNG in the archive
 // that later reads would trip over.
 func (s *Store) Put(f *Frame) error {
-	s.decoded.put(frameKey(f.Product, f.Time), f)
-
 	if s.dir == "" {
+		// Indexed before it is cached, so that if caching it evicts an older
+		// frame the eviction hook removes that one and not this.
+		unix := f.Time.UTC().Unix()
+		s.mu.Lock()
+		markFrame(s.index, f.Product, unix)
+		markFrame(s.fetched, f.Product, unix)
+		s.mu.Unlock()
+		s.decoded.put(frameKey(f.Product, f.Time), f)
 		return nil
 	}
+
+	s.decoded.put(frameKey(f.Product, f.Time), f)
 
 	path := s.framePath(f.Product, f.Time)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -316,10 +338,7 @@ func (s *Store) Put(f *Frame) error {
 	}
 
 	s.mu.Lock()
-	if s.index[f.Product] == nil {
-		s.index[f.Product] = make(map[int64]bool)
-	}
-	s.index[f.Product][f.Time.UTC().Unix()] = true
+	markFrame(s.index, f.Product, f.Time.UTC().Unix())
 	known, seen := s.meta[f.Product]
 	s.mu.Unlock()
 
@@ -383,6 +402,14 @@ func (s *Store) Get(product string, ts time.Time) (*Frame, error) {
 // empty behind them. It returns how many frames went.
 func (s *Store) Prune(product string, cutoff time.Time) int {
 	if s.dir == "" {
+		// Nothing on disk; only the record of what was fetched needs trimming.
+		s.mu.Lock()
+		for unix := range s.fetched[product] {
+			if unix < cutoff.Unix() {
+				delete(s.fetched[product], unix)
+			}
+		}
+		s.mu.Unlock()
 		return 0
 	}
 	removed := 0
@@ -531,6 +558,14 @@ func decodeFrame(body []byte, product string, ts time.Time, meta productMeta) (*
 		Offset:  meta.Offset,
 		Values:  values,
 	}, nil
+}
+
+// markFrame records a frame in a product -> unix-seconds set. Callers hold s.mu.
+func markFrame(set map[string]map[int64]bool, product string, unix int64) {
+	if set[product] == nil {
+		set[product] = make(map[int64]bool)
+	}
+	set[product][unix] = true
 }
 
 func frameKey(product string, ts time.Time) string {

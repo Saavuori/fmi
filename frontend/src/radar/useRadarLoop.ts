@@ -56,7 +56,10 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
   const [frames, setFrames] = useState<FrameRef[]>([]);
   const [index, setIndexState] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [loadedCount, setLoadedCount] = useState(0);
+  // Every frame URL already preloaded (or failed to), across refreshes. A URL
+  // carries the product, stamp and palette, so a change of any of them is a
+  // fresh load without a reset.
+  const [loaded, setLoaded] = useState<ReadonlySet<string>>(() => new Set());
   const [coldStart, setColdStart] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState(true);
@@ -72,7 +75,6 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
     setFrames([]);
     setIndexState(0);
     setLive(true);
-    setLoadedCount(0);
   }
 
   // The dwell counter is animation bookkeeping the UI never renders, so it lives
@@ -83,11 +85,15 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
   const liveRef = useRef(live);
   const indexRef = useRef(index);
   const playingRef = useRef(playing);
+  // Read by the preload effect, which must not restart on every image that
+  // finishes. Declared before it, so it is current by the time that runs.
+  const loadedRef = useRef(loaded);
   useEffect(() => {
     liveRef.current = live;
     indexRef.current = index;
     playingRef.current = playing;
-  }, [live, index, playing]);
+    loadedRef.current = loaded;
+  }, [live, index, playing, loaded]);
 
   // Load (and periodically refresh) the frame index.
   useEffect(() => {
@@ -141,28 +147,33 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
     };
   }, [product, windowHours]);
 
-  // Preload the frames of the current product and palette, oldest first so the
-  // loop becomes playable in order.
+  // Preload the frames of the current product and palette that are not loaded
+  // yet, oldest first so the loop becomes playable in order.
+  //
+  // Only the missing ones: the index refresh hands back a new array every
+  // minute, and restarting from zero on each one re-requested the whole window
+  // (a week is ~2000 images) and put the loading note back up every minute.
   useEffect(() => {
-    if (frames.length === 0) return;
+    const pending = frames
+      .map(f => frameUrl(product, f.stamp, palette))
+      .filter(url => !loadedRef.current.has(url));
+    if (pending.length === 0) return;
     let cancelled = false;
     let cursor = 0;
-    let done = 0;
 
     const next = () => {
-      if (cancelled || cursor >= frames.length) return;
-      const frame = frames[cursor++];
+      if (cancelled || cursor >= pending.length) return;
+      const url = pending[cursor++];
       const img = new Image();
       const finish = () => {
         if (cancelled) return;
-        done += 1;
-        setLoadedCount(done);
+        setLoaded(prev => new Set(prev).add(url));
         next();
       };
       img.onload = finish;
       // A frame that fails to load must not stall the queue behind it.
       img.onerror = finish;
-      img.src = frameUrl(product, frame.stamp, palette);
+      img.src = url;
     };
 
     for (let i = 0; i < PRELOAD_CONCURRENCY; i++) next();
@@ -171,13 +182,10 @@ export function useRadarLoop(product: string, palette: string, windowHours: numb
     };
   }, [frames, product, palette]);
 
-  // Restart the loaded count when the palette changes, since every URL changes
-  // with it. Same during-render adjustment as the selection reset above.
-  const [prevPalette, setPrevPalette] = useState(palette);
-  if (palette !== prevPalette) {
-    setPrevPalette(palette);
-    setLoadedCount(0);
-  }
+  const loadedCount = useMemo(
+    () => frames.filter(f => loaded.has(frameUrl(product, f.stamp, palette))).length,
+    [frames, loaded, product, palette]
+  );
 
   // The animation tick.
   useEffect(() => {

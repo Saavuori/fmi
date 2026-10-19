@@ -8,13 +8,13 @@ interface PanelProps {
   variant: 'filter' | 'detail';
   isMobile: boolean;
   /**
-   * Whether the panel exists at all. A mode passes `open={false}` for its filter
+   * Whether the panel exists at all. The map passes `open={false}` for its filter
    * panel while a detail overlay is up on mobile, so the filter launcher isn't
    * stranded underneath it.
    */
   open: boolean;
   ariaLabel: string;
-  /** Extra classes for the panel root (e.g. 'webcam-popup'). */
+  /** Extra classes for the panel root (e.g. 'station-detail'). */
   className?: string;
   /** App-level collapsed flag. */
   collapsed: boolean;
@@ -38,7 +38,7 @@ const DESKTOP_CLASS: Record<PanelProps['variant'], string> = {
  *
  * Desktop is the existing `.glass-panel` rail with its collapse-sliver semantics
  * (`useCollapsiblePanel`). On phones a rail has nowhere to go, so the panel
- * becomes a plain full-screen overlay above the tab bar: it is either up or it
+ * becomes a plain full-screen overlay: it is either up or it
  * is not. That replaced a draggable bottom sheet with peek/half/full snap
  * points, which permanently occupied the bottom of the screen and squeezed the
  * radar timeline — the one control a phone visitor actually drags — into a

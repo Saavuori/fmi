@@ -89,7 +89,7 @@ var paletteDBZCVD = Palette{
 		{Value: 4, R: 70, G: 110, B: 220, A: 0},
 		{Value: 8, R: 70, G: 110, B: 220, A: 155},
 		{Value: 15, R: 66, G: 176, B: 226, A: 208},
-		{Value: 22, R: castUint8(140), G: 214, B: 226, A: 228},
+		{Value: 22, R: 140, G: 214, B: 226, A: 228},
 		{Value: 30, R: 233, G: 226, B: 170, A: 242},
 		{Value: 38, R: 240, G: 178, B: 90, A: 250},
 		{Value: 46, R: 224, G: 118, B: 46, A: 255},
@@ -137,10 +137,6 @@ var Palettes = map[string]Palette{
 	paletteRateCVD.ID:  paletteRateCVD,
 	paletteAccumCVD.ID: paletteAccumCVD,
 }
-
-// castUint8 exists only so a stop table entry can be written without a literal
-// type conversion cluttering the line.
-func castUint8(v int) uint8 { return uint8(v) }
 
 // ResolvePalette picks the palette for a request: the caller's choice when it is
 // both known and dimensionally compatible with the product, otherwise the

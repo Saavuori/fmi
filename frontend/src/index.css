@@ -124,7 +124,6 @@ a,
 
 /* Map drag shouldn't select text, but panel content is real content. */
 .glass-panel,
-.vessel-card-overlay,
 .version-badge {
   user-select: text;
   -webkit-user-select: text;
@@ -220,36 +219,6 @@ a,
   flex-shrink: 0;
 }
 
-.conn-dot.connected {
-  background: var(--accent-teal);
-  box-shadow: 0 0 6px var(--accent-teal);
-}
-
-.conn-dot.connecting {
-  background: var(--accent-gold);
-}
-
-.conn-dot.disconnected {
-  background: var(--accent-coral);
-}
-
-.clear-filters-btn {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: var(--accent-teal);
-  cursor: pointer;
-  font-weight: 600;
-  padding: 0;
-  font-family: inherit;
-  font-size: 0.75rem;
-  transition: opacity 0.2s;
-}
-
-.clear-filters-btn:hover {
-  opacity: 0.8;
-}
-
 /* ---------- Place search ----------
    Inherited from the sibling app's vessel search, which searched a list already
    in the browser. This one asks the backend, so it also has pending and empty
@@ -339,13 +308,6 @@ a,
 
 .place-search-result:hover {
   background: var(--bg-button-hover);
-}
-
-.place-search-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .place-search-name {
@@ -523,10 +485,6 @@ a,
   border-color: var(--border-button-hover);
 }
 
-.category-row.inactive {
-  opacity: 0.35;
-}
-
 .category-swatch {
   width: 10px;
   height: 10px;
@@ -612,96 +570,6 @@ a,
   background: rgba(45, 212, 191, 0.08);
 }
 
-/* Alerts (AtoN faults) list */
-.alerts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.alert-item {
-  padding: 7px 9px;
-  background: rgba(245, 158, 11, 0.07);
-  border: 1px solid rgba(245, 158, 11, 0.22);
-  border-radius: 8px;
-}
-
-.alert-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-strong);
-}
-
-.alert-desc {
-  font-size: 0.68rem;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-/* ---------- Nearest-vessels list (mobile glanceable peek) ---------- */
-
-.nearest-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-bottom: 2px;
-}
-
-.nearest-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-radius: 8px;
-  background: var(--bg-button);
-  border: 1px solid var(--border-button);
-  color: var(--text-body);
-  font-family: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.nearest-row:hover {
-  background: var(--bg-button-hover);
-  border-color: var(--border-button-hover);
-}
-
-.nearest-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.nearest-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-strong);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.nearest-dist {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-.nearest-speed {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-  min-width: 46px;
-  text-align: right;
-}
-
 /* ---------- Right detail panel ---------- */
 
 .detail-popup {
@@ -726,27 +594,6 @@ a,
   background: var(--bg-panel-hover);
 }
 
-.webcam-popup {
-  width: 400px;
-}
-
-.webcam-embed {
-  position: relative;
-  width: 100%;
-  padding-top: 56.25%; /* 16:9 */
-  border-radius: 8px;
-  overflow: hidden;
-  background: #000;
-}
-
-.webcam-embed iframe {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
 .detail-content {
   display: flex;
   flex-direction: column;
@@ -759,25 +606,6 @@ a,
   align-items: flex-start;
   gap: 10px;
   margin-bottom: 14px;
-}
-
-.vessel-badge {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(45, 212, 191, 0.12);
-  border: 1.5px solid var(--accent-teal);
-  color: var(--accent-teal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.vessel-badge.port-badge {
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-  background: rgba(56, 189, 248, 0.12);
 }
 
 .detail-title {
@@ -871,52 +699,6 @@ a,
   margin-bottom: 10px;
 }
 
-.status-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.status-value {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--accent-teal);
-}
-
-.destination-callout {
-  background: rgba(56, 189, 248, 0.07);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  border-radius: 10px;
-  padding: 8px 12px;
-  margin-bottom: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.dest-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.dest-row span {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.dest-row b {
-  font-size: 0.8rem;
-  color: var(--text-strong);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .detail-facts {
   display: flex;
   flex-direction: column;
@@ -952,200 +734,6 @@ a,
   padding: 8px 2px;
 }
 
-/* Port calls board */
-.port-calls-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.port-call-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
-  background: var(--bg-button);
-  border: 1px solid var(--border-button);
-  border-radius: 8px;
-  font-family: inherit;
-  cursor: pointer;
-  text-align: left;
-  color: var(--text-body);
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.port-call-row:hover:not(:disabled) {
-  background: var(--bg-button-hover);
-  border-color: var(--border-button-hover);
-}
-
-.port-call-row:disabled {
-  cursor: default;
-  opacity: 0.7;
-}
-
-.call-kind {
-  display: inline-flex;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.call-kind.arrival {
-  color: var(--accent-teal);
-  background: rgba(45, 212, 191, 0.12);
-}
-
-.call-kind.departure {
-  color: var(--accent-blue);
-  background: rgba(56, 189, 248, 0.12);
-}
-
-.call-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.call-vessel {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-strong);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.call-berth {
-  font-size: 0.66rem;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.call-time {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.call-time.actual {
-  color: var(--accent-teal);
-}
-
-.call-time small {
-  font-size: 0.62rem;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-/* ---------- Floating vessel card ---------- */
-
-.vessel-card-overlay {
-  position: absolute;
-  z-index: 11;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glow);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7);
-  padding: 8px 12px;
-  max-width: min(92vw, 560px);
-}
-
-.vessel-card-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.vessel-card-name {
-  font-weight: 800;
-  font-size: 0.85rem;
-  color: var(--text-strong);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.vessel-card-stat {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.vessel-card-dest {
-  font-size: 0.75rem;
-  color: var(--accent-blue);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.follow-btn.active,
-.trail-btn.active,
-.track-replay-btn.active {
-  color: var(--accent-teal);
-  border-color: var(--border-focus);
-  background: rgba(45, 212, 191, 0.12);
-}
-
-/* Nothing recorded for the chosen window yet — the button stays in place so
-   the action row doesn't reflow the moment a first fix lands. */
-.track-replay-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.trail-window {
-  display: inline-flex;
-  gap: 3px;
-  flex-shrink: 0;
-}
-
-.trail-window-btn {
-  background: var(--bg-button);
-  border: 1px solid var(--border-button);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 3px 7px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.trail-window-btn:hover {
-  background: var(--bg-button-hover);
-  color: var(--text-primary);
-}
-
-.trail-window-btn.active {
-  color: var(--accent-teal);
-  border-color: var(--border-focus);
-  background: rgba(45, 212, 191, 0.12);
-}
-
 /* ---------- Replay transport bar ---------- */
 
 .replay-bar {
@@ -1167,40 +755,6 @@ a,
   padding: 10px 14px;
 }
 
-.replay-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.replay-windows {
-  display: inline-flex;
-  gap: 3px;
-}
-
-.replay-window-btn {
-  background: var(--bg-button);
-  border: 1px solid var(--border-button);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 4px 8px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.replay-window-btn:hover:not(:disabled) {
-  background: var(--bg-button-hover);
-  color: var(--text-primary);
-}
-
-.replay-window-btn.active {
-  color: var(--accent-teal);
-  border-color: var(--border-focus);
-  background: rgba(45, 212, 191, 0.12);
-}
-
 .replay-play {
   display: inline-flex;
   align-items: center;
@@ -1218,42 +772,6 @@ a,
 
 .replay-play:hover:not(:disabled) {
   background: rgba(45, 212, 191, 0.24);
-}
-
-.replay-clock {
-  font-family: 'Courier New', monospace;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-strong);
-  min-width: 58px;
-  text-align: center;
-}
-
-/* A single vessel's track can reach back 60 days, so its readout carries the
-   date as well as the time and needs the room for it. */
-.replay-clock--wide {
-  font-size: 0.82rem;
-  min-width: 124px;
-  white-space: nowrap;
-}
-
-.replay-speed {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-secondary);
-  margin-left: auto;
-}
-
-.replay-speed select {
-  background: var(--bg-button);
-  border: 1px solid var(--border-button);
-  border-radius: 6px;
-  color: var(--text-body);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 4px;
-  cursor: pointer;
 }
 
 .replay-scrubber {
@@ -1292,43 +810,7 @@ a,
   cursor: default;
 }
 
-.replay-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.68rem;
-  color: var(--text-muted);
-}
-
-.replay-meta-mid {
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.replay-error {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--accent-coral);
-}
-
-/* Single-vessel track replay reuses the transport chrome above — the two bars
-   are never on screen together — and differs only in naming the ship it is
-   rewinding, which must not push the window's timestamps out of the row. */
-.replay-bar--track .replay-meta-mid {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.replay-bar--track .replay-meta > span:first-child,
-.replay-bar--track .replay-meta > span:last-child {
-  flex-shrink: 0;
-}
-
-/* The phone layout docks this bar full-bleed above the tab bar — see the mobile
+/* The phone layout docks this bar full-bleed along the bottom edge — see the mobile
    section further down, which owns every override it needs. */
 
 /* ---------- Version badge ---------- */
@@ -1513,49 +995,21 @@ a,
   border-bottom-color: var(--border-glow) !important;
 }
 
-.marine-popup h4 {
-  margin: 0 0 8px;
-  font-size: 0.85rem;
-  color: var(--text-strong);
-}
-
-.marine-popup div {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  font-size: 0.75rem;
-  padding: 2px 0;
-}
-
-.marine-popup div span {
-  color: var(--text-secondary);
-}
-
-.marine-popup small {
-  display: block;
-  margin-top: 6px;
-  color: var(--text-muted);
-  font-size: 0.65rem;
-}
-
 /* ---------- Scrollbars ---------- */
 
 .filter-scroll-area::-webkit-scrollbar,
-.detail-content::-webkit-scrollbar,
-.port-calls-list::-webkit-scrollbar {
+.detail-content::-webkit-scrollbar {
   width: 6px;
 }
 
 .filter-scroll-area::-webkit-scrollbar-thumb,
-.detail-content::-webkit-scrollbar-thumb,
-.port-calls-list::-webkit-scrollbar-thumb {
+.detail-content::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 .filter-scroll-area::-webkit-scrollbar-thumb:hover,
-.detail-content::-webkit-scrollbar-thumb:hover,
-.port-calls-list::-webkit-scrollbar-thumb:hover {
+.detail-content::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
 
@@ -1575,25 +1029,7 @@ a,
 }
 
 @media (max-width: 768px) {
-  /* The floating summary pills are redundant on mobile — the detail overlay is
-     the single source of selection detail — so hide them (Meri's follow/trail
-     actions move into the panel header via VesselActions). */
-  .vessel-card-overlay,
-  .train-card-overlay,
-  .selected-card-overlay {
-    display: none;
-  }
-
-  /* Meri's relocated follow / track-history controls, in the detail panel. */
-  .vessel-actions-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  /* Category filters (Meri ship types, Raide train types) become horizontal
+  /* Category lists (the lightning age bands) become horizontal
      wrapped chips on phones instead of full-width rows — denser, and quicker to
      scan/toggle with a thumb. The swatch, label and count are unchanged. */
   .category-list {

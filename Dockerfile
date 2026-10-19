@@ -9,8 +9,8 @@ RUN npm run build
 # Stage 2: Build the Go backend with the frontend embedded.
 # Pinned to BUILDPLATFORM and cross-compiled via GOARCH: without this the arm64
 # leg of the multi-arch build runs the Go toolchain under QEMU emulation, which
-# is where nearly all of the build time went. CGO_ENABLED=0 (load-bearing for
-# the pure-Go SQLite driver) means cross-compiling costs nothing.
+# is where nearly all of the build time went. The binary is pure Go with
+# CGO_ENABLED=0, so cross-compiling costs nothing.
 FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS backend-builder
 WORKDIR /app
 COPY backend/go.mod backend/go.sum ./
