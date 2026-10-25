@@ -124,23 +124,34 @@ type coverageDoc struct {
 	} `xml:"member"`
 }
 
+// exceptionDoc is FMI's WFS error envelope.
+//
+// There is deliberately no field for the exceptionCode attribute: `a>b,attr` is
+// not a legal encoding/xml tag, and including one makes Unmarshal fail for the
+// whole struct — which once swallowed the upstream message and reported a
+// confusing "expected <FeatureCollection>" error instead.
 type exceptionDoc struct {
 	XMLName xml.Name `xml:"ExceptionReport"`
 	Text    string   `xml:"Exception>ExceptionText"`
 }
 
-// checkException turns FMI's error envelope into a Go error. It is worth checking
-// explicitly because some failures arrive with HTTP 200, so a successful fetch is
-// not the same as a successful query.
-func checkException(body []byte) error {
+// CheckException turns FMI's WFS error envelope into a Go error. It is worth
+// checking explicitly because some failures arrive with HTTP 200, so a
+// successful fetch is not the same as a successful query. Every WFS consumer
+// here goes through it: the multipointcoverage parsers below and the radar
+// frame discovery.
+//
+// An exception body is never data, so it is reported as an error whether or
+// not its text can be extracted.
+func CheckException(body []byte) error {
 	if !bytes.Contains(body, []byte("ExceptionReport")) {
 		return nil
 	}
 	var exc exceptionDoc
-	if err := xml.Unmarshal(body, &exc); err != nil {
-		return fmt.Errorf("fmi wfs returned an unparseable exception report")
+	text := ""
+	if err := xml.Unmarshal(body, &exc); err == nil {
+		text = strings.TrimSpace(exc.Text)
 	}
-	text := strings.TrimSpace(exc.Text)
 	if text == "" {
 		text = "unspecified WFS exception"
 	}
@@ -154,7 +165,7 @@ func checkException(body []byte) error {
 // rejected rather than truncated, because silently zipping a short tuple list
 // against a long position list would attach readings to the wrong places.
 func Parse(body []byte) (*MultiPoint, error) {
-	if err := checkException(body); err != nil {
+	if err := CheckException(body); err != nil {
 		return nil, err
 	}
 
@@ -182,16 +193,11 @@ func Parse(body []byte) (*MultiPoint, error) {
 		count := len(positions) / 3
 
 		values := strings.Fields(cov.RangeSet.DataBlock.Tuples)
+		// No rangeType means no parameters to read; positions alone are still
+		// meaningful for lightning-style "it happened here" data.
 		width := len(fields)
-		if width == 0 {
-			// No rangeType means no parameters to read; positions alone are still
-			// meaningful for lightning-style "it happened here" data.
-			width = 0
-		}
-		if width > 0 {
-			if len(values) != count*width {
-				return nil, fmt.Errorf("tuple list has %d values, expected %d positions x %d fields", len(values), count, width)
-			}
+		if width > 0 && len(values) != count*width {
+			return nil, fmt.Errorf("tuple list has %d values, expected %d positions x %d fields", len(values), count, width)
 		}
 
 		for i := 0; i < count; i++ {
@@ -234,7 +240,7 @@ func Parse(body []byte) (*MultiPoint, error) {
 // document and are joined by a `point-<fmisid>` id, so this does that join rather
 // than assuming the two lists happen to be in the same order.
 func ParseLocations(body []byte) ([]Location, error) {
-	if err := checkException(body); err != nil {
+	if err := CheckException(body); err != nil {
 		return nil, err
 	}
 

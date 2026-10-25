@@ -1,8 +1,13 @@
 package tutka
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
+
+	"fmi/internal/core/cache"
+	"fmi/internal/core/config"
 )
 
 // The archive has to stay contiguous backwards from the present while it fills.
@@ -49,5 +54,70 @@ func TestBackfillOrderHandlesEmptyAndSingle(t *testing.T) {
 	one := []frameMeta{{Time: time.Now()}}
 	if got := backfillOrder(one); len(got) != 1 || !got[0].Time.Equal(one[0].Time) {
 		t.Error("a single frame should pass through unchanged")
+	}
+}
+
+// A discovery request that fails during the boot backfill has to be retried for
+// the same slice of history. It used to fall through to the loop's post
+// statement, which moved on to the previous day: one transient FMI error left a
+// 24-hour hole in the archive until the next restart.
+func TestBackfillRetriesAFailedChunk(t *testing.T) {
+	cfg := &config.Config{
+		FramesDir:      t.TempDir(),
+		GridBBox:       [4]float64{0, 0, 4000, 4000},
+		GridResolution: 2000,
+	}
+	s := NewService(cfg, cache.NewMemoryCache())
+	s.retryWait = time.Millisecond
+
+	type window struct{ from, to time.Time }
+	var calls []window
+	s.discover = func(_ context.Context, _ Product, from, to time.Time) ([]frameMeta, error) {
+		calls = append(calls, window{from, to})
+		if len(calls) == 1 {
+			return nil, errors.New("fmi wfs exception: temporarily unavailable")
+		}
+		return nil, nil
+	}
+
+	p := s.products[0]
+	p.RetainHours = 48
+	s.backfillProduct(context.Background(), p)
+
+	if len(calls) != 3 {
+		t.Fatalf("got %d discovery calls, want 3 (failed day, its retry, the day before)", len(calls))
+	}
+	if !calls[1].from.Equal(calls[0].from) || !calls[1].to.Equal(calls[0].to) {
+		t.Errorf("retry asked for %v..%v, want the failed window %v..%v",
+			calls[1].from, calls[1].to, calls[0].from, calls[0].to)
+	}
+	if !calls[2].to.Equal(calls[0].from) {
+		t.Errorf("next window ends at %v, want it to continue from %v", calls[2].to, calls[0].from)
+	}
+}
+
+// A chunk that keeps failing is given up on rather than retried forever, so one
+// bad day cannot stall the backfill of everything older.
+func TestBackfillGivesUpOnAPersistentlyFailingChunk(t *testing.T) {
+	cfg := &config.Config{
+		FramesDir:      t.TempDir(),
+		GridBBox:       [4]float64{0, 0, 4000, 4000},
+		GridResolution: 2000,
+	}
+	s := NewService(cfg, cache.NewMemoryCache())
+	s.retryWait = time.Millisecond
+
+	calls := 0
+	s.discover = func(context.Context, Product, time.Time, time.Time) ([]frameMeta, error) {
+		calls++
+		return nil, errors.New("down")
+	}
+
+	p := s.products[0]
+	p.RetainHours = 48
+	s.backfillProduct(context.Background(), p)
+
+	if want := 2 * backfillAttempts; calls != want {
+		t.Errorf("got %d discovery calls, want %d (%d attempts for each of two days)", calls, want, backfillAttempts)
 	}
 }

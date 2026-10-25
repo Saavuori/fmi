@@ -15,7 +15,7 @@
 // The text it produces is factual — what moved, and between which versions.
 // Nothing here can know *why* a bump matters, which is the part this changelog is
 // actually written for, so expand the wording by hand when an update deserves it
-// (the v0.10.3 entry is the house voice to aim at).
+// (the v0.4.3 Dependabot entry is the house voice to aim at).
 
 const { execSync } = require('child_process');
 const fs = require('fs');
